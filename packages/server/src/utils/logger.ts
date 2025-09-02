@@ -1,4 +1,5 @@
 import winston from "winston";
+import { config, configService } from "../config/config";
 
 const logFormat = winston.format.combine(
   winston.format.timestamp(),
@@ -8,7 +9,7 @@ const logFormat = winston.format.combine(
 );
 
 export const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
+  level: config.logLevel,
   format: logFormat,
   defaultMeta: { service: 'collabboard-server' },
   transports: [
@@ -27,7 +28,7 @@ export const logger = winston.createLogger({
 });
 
 // Add console transport for development
-if (process.env.NODE_ENV !== 'production') {
+if (configService.isDevelopment()) {
   logger.add(new winston.transports.Console({
     format: winston.format.combine(
       winston.format.colorize(),

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../utils/logger";
+import { configService } from "../config/config";
 
 export class AppError extends Error {
   statusCode: number;
@@ -35,7 +36,7 @@ export const globalErrorHandler = (
   });
 
   // Send error response
-  if (process.env.NODE_ENV === 'production') {
+  if (configService.isProduction()) {
     // Production: Don't leak error details
     if (error.isOperational) {
       return res.status(error.statusCode).json({

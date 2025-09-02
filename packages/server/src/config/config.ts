@@ -11,6 +11,7 @@ interface Config {
   nodeEnv: string;
   logLevel: string;
   corsOrigin: string;
+  version: string;
 }
 
 class ConfigService {
@@ -24,7 +25,8 @@ class ConfigService {
       refreshTokenSecret: this.getRequiredEnv("REFRESH_TOKEN_SECRET"),
       nodeEnv: process.env.NODE_ENV || "development",
       logLevel: process.env.LOG_LEVEL || "info",
-      corsOrigin: process.env.CORS_ORIGIN || "*"
+      corsOrigin: process.env.CORS_ORIGIN || "*",
+      version: process.env.npm_package_version || "1.0.0"
     };
 
     this.validateConfig();

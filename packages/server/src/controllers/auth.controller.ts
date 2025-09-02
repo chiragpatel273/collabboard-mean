@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { register as registerUser, login as loginUser, refreshToken, logout, logoutAll, cleanupAllExpiredTokens } from "../services/auth.service";
 import { asyncHandler } from "../middleware/error.middleware";
+import { configService } from "../config/config";
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
@@ -9,7 +10,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
   // Set refresh token as httpOnly cookie
   res.cookie('refreshToken', newRefreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: configService.isProduction(),
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });
@@ -32,7 +33,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
   // Set refresh token as httpOnly cookie
   res.cookie('refreshToken', newRefreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
+    secure: configService.isProduction(),
     sameSite: 'strict',
     maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
   });

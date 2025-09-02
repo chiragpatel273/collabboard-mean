@@ -9,7 +9,7 @@ export const healthCheck = asyncHandler(async (req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
     environment: config.nodeEnv,
-    version: process.env.npm_package_version || "1.0.0",
+    version: config.version,
     services: {
       database: mongoose.connection.readyState === 1 ? "Connected" : "Disconnected",
       memory: {
