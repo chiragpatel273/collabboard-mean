@@ -8,30 +8,36 @@ export class ProjectRepository extends BaseRepository<IProject> {
   }
 
   async findByOwner(ownerId: string): Promise<IProject[]> {
-    return await this.find({ ownerId: ownerId, isDeleted: false }, {
-      populate: ['ownerId', 'members'],
-      sort: { updatedAt: -1 }
-    });
+    return await this.find(
+      { ownerId: ownerId, isDeleted: false },
+      {
+        populate: ['ownerId', 'members'],
+        sort: { updatedAt: -1 },
+      }
+    );
   }
 
   async findByMember(userId: string): Promise<IProject[]> {
-    return await this.find({
-      $or: [
-        { ownerId: userId },
-        { members: userId }
-      ],
-      isDeleted: false
-    }, {
-      populate: ['ownerId', 'members'],
-      sort: { updatedAt: -1 }
-    });
+    return await this.find(
+      {
+        $or: [{ ownerId: userId }, { members: userId }],
+        isDeleted: false,
+      },
+      {
+        populate: ['ownerId', 'members'],
+        sort: { updatedAt: -1 },
+      }
+    );
   }
 
   async findActiveProjects(filter: FilterQuery<IProject> = {}): Promise<IProject[]> {
-    return await this.find({ ...filter, isDeleted: false }, {
-      populate: ['ownerId', 'members'],
-      sort: { updatedAt: -1 }
-    });
+    return await this.find(
+      { ...filter, isDeleted: false },
+      {
+        populate: ['ownerId', 'members'],
+        sort: { updatedAt: -1 },
+      }
+    );
   }
 
   async findProjectsWithPagination(
@@ -44,15 +50,12 @@ export class ProjectRepository extends BaseRepository<IProject> {
     } = {}
   ) {
     const searchFilter: FilterQuery<IProject> = { ...filter };
-    
+
     // Filter by user access if provided
     if (options.userId) {
-      searchFilter.$or = [
-        { ownerId: options.userId },
-        { members: options.userId }
-      ];
+      searchFilter.$or = [{ ownerId: options.userId }, { members: options.userId }];
     }
-    
+
     // Exclude deleted projects unless explicitly requested
     if (!options.includeDeleted) {
       searchFilter.isDeleted = false;
@@ -60,7 +63,7 @@ export class ProjectRepository extends BaseRepository<IProject> {
 
     return await this.findWithPagination(searchFilter, page, limit, {
       populate: ['ownerId', 'members'],
-      sort: { updatedAt: -1 }
+      sort: { updatedAt: -1 },
     });
   }
 
@@ -73,76 +76,75 @@ export class ProjectRepository extends BaseRepository<IProject> {
     } = {}
   ): Promise<IProject[]> {
     const filter: FilterQuery<IProject> = { isDeleted: false };
-    
+
     // Filter by user access if provided
     if (userId) {
-      filter.$or = [
-        { ownerId: userId },
-        { members: userId }
-      ];
+      filter.$or = [{ ownerId: userId }, { members: userId }];
     }
 
     return await this.textSearch(searchTerm, filter, {
       populate: ['ownerId', 'members'],
       limit: options.limit,
-      skip: options.skip
+      skip: options.skip,
     });
   }
 
   async addMember(projectId: string, userId: string): Promise<IProject | null> {
-    return await this.findByIdAndUpdate(projectId, {
-      $addToSet: { members: userId }
-    }, { populate: ['ownerId', 'members'] });
+    return await this.findByIdAndUpdate(
+      projectId,
+      {
+        $addToSet: { members: userId },
+      },
+      { populate: ['ownerId', 'members'] }
+    );
   }
 
   async removeMember(projectId: string, userId: string): Promise<IProject | null> {
-    return await this.findByIdAndUpdate(projectId, {
-      $pull: { members: userId }
-    }, { populate: ['ownerId', 'members'] });
+    return await this.findByIdAndUpdate(
+      projectId,
+      {
+        $pull: { members: userId },
+      },
+      { populate: ['ownerId', 'members'] }
+    );
   }
 
   async softDelete(projectId: string): Promise<IProject | null> {
     return await this.findByIdAndUpdate(projectId, {
       isDeleted: true,
-      deletedAt: new Date()
+      deletedAt: new Date(),
     });
   }
 
   async restore(projectId: string): Promise<IProject | null> {
     return await this.findByIdAndUpdate(projectId, {
       isDeleted: false,
-      $unset: { deletedAt: 1 }
+      $unset: { deletedAt: 1 },
     });
   }
 
   async findUserProjects(userId: string, includeDeleted: boolean = false): Promise<IProject[]> {
     const filter: FilterQuery<IProject> = {
-      $or: [
-        { ownerId: userId },
-        { members: userId }
-      ]
+      $or: [{ ownerId: userId }, { members: userId }],
     };
-    
+
     if (!includeDeleted) {
       filter.isDeleted = false;
     }
 
     return await this.find(filter, {
       populate: ['ownerId', 'members'],
-      sort: { updatedAt: -1 }
+      sort: { updatedAt: -1 },
     });
   }
 
   async isUserMemberOrOwner(projectId: string, userId: string): Promise<boolean> {
     const project = await this.findOne({
       _id: projectId,
-      $or: [
-        { ownerId: userId },
-        { members: userId }
-      ],
-      isDeleted: false
+      $or: [{ ownerId: userId }, { members: userId }],
+      isDeleted: false,
     });
-    
+
     return project !== null;
   }
 
@@ -153,7 +155,7 @@ export class ProjectRepository extends BaseRepository<IProject> {
 
   async updateLastActivity(projectId: string): Promise<IProject | null> {
     return await this.findByIdAndUpdate(projectId, {
-      updatedAt: new Date()
+      updatedAt: new Date(),
     });
   }
 
@@ -170,14 +172,14 @@ export class ProjectRepository extends BaseRepository<IProject> {
       this.countDocuments(),
       this.countDocuments({ isDeleted: false }),
       this.countDocuments({ isDeleted: true }),
-      this.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
+      this.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
     ]);
 
     return {
       totalProjects,
       activeProjects,
       deletedProjects,
-      recentProjects
+      recentProjects,
     };
   }
 }

@@ -1,6 +1,6 @@
-import rateLimit from "express-rate-limit";
-import helmet from "helmet";
-import { Request, Response, NextFunction } from "express";
+import rateLimit from 'express-rate-limit';
+import helmet from 'helmet';
+import { Request, Response, NextFunction } from 'express';
 
 // Rate limiting configuration
 export const apiLimiter = rateLimit({
@@ -8,8 +8,8 @@ export const apiLimiter = rateLimit({
   max: 100, // limit each IP to 100 requests per windowMs
   message: {
     success: false,
-    message: "Too many requests from this IP, please try again later.",
-    timestamp: new Date().toISOString()
+    message: 'Too many requests from this IP, please try again later.',
+    timestamp: new Date().toISOString(),
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -21,8 +21,8 @@ export const authLimiter = rateLimit({
   max: 5, // limit each IP to 5 requests per windowMs for auth routes
   message: {
     success: false,
-    message: "Too many authentication attempts, please try again later.",
-    timestamp: new Date().toISOString()
+    message: 'Too many authentication attempts, please try again later.',
+    timestamp: new Date().toISOString(),
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -35,24 +35,24 @@ export const securityConfig = helmet({
       defaultSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
+      imgSrc: ["'self'", 'data:', 'https:'],
     },
   },
   hsts: {
     maxAge: 31536000,
     includeSubDomains: true,
-    preload: true
-  }
+    preload: true,
+  },
 });
 
 // Request logging middleware
 export const requestLogger = (req: Request, res: Response, next: NextFunction) => {
   const start = Date.now();
-  
+
   res.on('finish', () => {
     const duration = Date.now() - start;
     console.log(`${req.method} ${req.originalUrl} - ${res.statusCode} - ${duration}ms`);
   });
-  
+
   next();
 };

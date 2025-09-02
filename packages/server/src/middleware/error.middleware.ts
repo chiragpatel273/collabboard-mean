@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { logger } from "../utils/logger";
-import { configService } from "../config/config";
+import { Request, Response, NextFunction } from 'express';
+import { logger } from '../utils/logger';
+import { configService } from '../config/config';
 
 export class AppError extends Error {
   statusCode: number;
@@ -17,12 +17,7 @@ export class AppError extends Error {
   }
 }
 
-export const globalErrorHandler = (
-  error: any,
-  req: Request,
-  res: Response,
-  next: NextFunction
-) => {
+export const globalErrorHandler = (error: any, req: Request, res: Response, next: NextFunction) => {
   error.statusCode = error.statusCode || 500;
   error.status = error.status || 'error';
 
@@ -32,7 +27,7 @@ export const globalErrorHandler = (
     stack: error.stack,
     url: req.originalUrl,
     method: req.method,
-    ip: req.ip
+    ip: req.ip,
   });
 
   // Send error response
@@ -42,13 +37,13 @@ export const globalErrorHandler = (
       return res.status(error.statusCode).json({
         success: false,
         message: error.message,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     } else {
       return res.status(500).json({
         success: false,
         message: 'Something went wrong!',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   } else {
@@ -58,7 +53,7 @@ export const globalErrorHandler = (
       error: error,
       message: error.message,
       stack: error.stack,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     });
   }
 };

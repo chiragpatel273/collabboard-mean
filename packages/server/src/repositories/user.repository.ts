@@ -24,7 +24,7 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   async searchUsers(
-    searchTerm: string, 
+    searchTerm: string,
     options: {
       limit?: number;
       skip?: number;
@@ -39,7 +39,7 @@ export class UserRepository extends BaseRepository<IUser> {
     return await this.textSearch(searchTerm, filter, {
       limit: options.limit,
       skip: options.skip,
-      populate: []
+      populate: [],
     });
   }
 
@@ -59,14 +59,14 @@ export class UserRepository extends BaseRepository<IUser> {
 
     return await this.findWithPagination(searchFilter, page, limit, {
       select: '-password -refreshTokens',
-      sort: { createdAt: -1 }
+      sort: { createdAt: -1 },
     });
   }
 
   async deactivateUser(userId: string): Promise<IUser | null> {
     return await this.findByIdAndUpdate(userId, {
       isActive: false,
-      refreshTokens: []
+      refreshTokens: [],
     });
   }
 
@@ -80,7 +80,7 @@ export class UserRepository extends BaseRepository<IUser> {
 
   async removeRefreshToken(userId: string, tokenToRemove: string): Promise<IUser | null> {
     return await this.findByIdAndUpdate(userId, {
-      $pull: { refreshTokens: tokenToRemove }
+      $pull: { refreshTokens: tokenToRemove },
     });
   }
 
@@ -109,14 +109,14 @@ export class UserRepository extends BaseRepository<IUser> {
       this.countDocuments(),
       this.countDocuments({ isActive: true }),
       this.countDocuments({ role: 'admin' }),
-      this.countDocuments({ createdAt: { $gte: thirtyDaysAgo } })
+      this.countDocuments({ createdAt: { $gte: thirtyDaysAgo } }),
     ]);
 
     return {
       totalUsers,
       activeUsers,
       adminUsers,
-      recentUsers
+      recentUsers,
     };
   }
 }

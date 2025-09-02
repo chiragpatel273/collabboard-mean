@@ -1,9 +1,9 @@
-import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
-import { config } from "../config/config";
-import { AppError } from "../middleware/error.middleware";
-import { UserRepository } from "../repositories";
-import { IUser, UserRole } from "../models/user.model";
+import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
+import { config } from '../config/config';
+import { AppError } from '../middleware/error.middleware';
+import { UserRepository } from '../repositories';
+import { IUser, UserRole } from '../models/user.model';
 
 export class AuthService {
   private userRepository: UserRepository;
@@ -16,21 +16,21 @@ export class AuthService {
     return jwt.sign(
       { id: userId, email, role },
       config.accessTokenSecret,
-      { expiresIn: "15m" } // Short-lived access token
+      { expiresIn: '15m' } // Short-lived access token
     );
   }
 
   private generateRefreshToken(userId: string): string {
     return jwt.sign(
-      { id: userId, type: "refresh" },
+      { id: userId, type: 'refresh' },
       config.refreshTokenSecret,
-      { expiresIn: "7d" } // Long-lived refresh token
+      { expiresIn: '7d' } // Long-lived refresh token
     );
   }
 
   private async cleanupExpiredTokens(user: IUser): Promise<number> {
     const validTokens: string[] = [];
-    
+
     for (const token of user.refreshTokens) {
       try {
         jwt.verify(token, config.refreshTokenSecret);
@@ -40,29 +40,29 @@ export class AuthService {
         console.log(`Removed expired refresh token for user ${user.email}`);
       }
     }
-    
+
     // Update user with only valid tokens
     if (validTokens.length !== user.refreshTokens.length) {
       await this.userRepository.updateRefreshTokens(user._id as string, validTokens);
     }
-    
+
     return validTokens.length;
   }
 
   async register(name: string, email: string, password: string, role: UserRole = UserRole.USER) {
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
-      throw new AppError("User already exists with this email", 400);
+      throw new AppError('User already exists with this email', 400);
     }
 
     const hashedPassword = await bcrypt.hash(password, 12);
-    const user = await this.userRepository.create({ 
-      name, 
-      email, 
-      password: hashedPassword, 
+    const user = await this.userRepository.create({
+      name,
+      email,
+      password: hashedPassword,
       role,
       refreshTokens: [],
-      isActive: true
+      isActive: true,
     });
 
     // Generate tokens
@@ -78,16 +78,16 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.userRepository.findByEmail(email);
     if (!user) {
-      throw new AppError("Invalid email or password", 401);
+      throw new AppError('Invalid email or password', 401);
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
     if (!isPasswordValid) {
-      throw new AppError("Invalid email or password", 401);
+      throw new AppError('Invalid email or password', 401);
     }
 
     if (!user.isActive) {
-      throw new AppError("Account has been deactivated", 401);
+      throw new AppError('Account has been deactivated', 401);
     }
 
     // Update last login
@@ -102,7 +102,10 @@ export class AuthService {
 
     // Add refresh token to user's existing tokens
     const currentTokens = user.refreshTokens || [];
-    await this.userRepository.updateRefreshTokens(user._id as string, [...currentTokens, refreshToken]);
+    await this.userRepository.updateRefreshTokens(user._id as string, [
+      ...currentTokens,
+      refreshToken,
+    ]);
 
     return { user, accessToken, refreshToken };
   }
@@ -110,18 +113,18 @@ export class AuthService {
   async refreshToken(token: string) {
     try {
       const decoded = jwt.verify(token, config.refreshTokenSecret) as { id: string; type: string };
-      
-      if (decoded.type !== "refresh") {
-        throw new AppError("Invalid token type", 401);
+
+      if (decoded.type !== 'refresh') {
+        throw new AppError('Invalid token type', 401);
       }
 
       const user = await this.userRepository.findById(decoded.id);
       if (!user || !user.isActive) {
-        throw new AppError("User not found or inactive", 401);
+        throw new AppError('User not found or inactive', 401);
       }
 
       if (!user.refreshTokens.includes(token)) {
-        throw new AppError("Invalid refresh token", 401);
+        throw new AppError('Invalid refresh token', 401);
       }
 
       // Clean up expired tokens
@@ -133,7 +136,7 @@ export class AuthService {
       return { user, accessToken };
     } catch (error) {
       if (error instanceof jwt.JsonWebTokenError) {
-        throw new AppError("Invalid refresh token", 401);
+        throw new AppError('Invalid refresh token', 401);
       }
       throw error;
     }
@@ -141,47 +144,51 @@ export class AuthService {
 
   async logout(userId: string, refreshToken: string) {
     await this.userRepository.removeRefreshToken(userId, refreshToken);
-    return { message: "Logged out successfully" };
+    return { message: 'Logged out successfully' };
   }
 
   async logoutAll(userId: string) {
     await this.userRepository.clearAllRefreshTokens(userId);
-    return { message: "Logged out from all devices successfully" };
+    return { message: 'Logged out from all devices successfully' };
   }
 
   async validateAccessToken(token: string): Promise<{ id: string; email: string; role: string }> {
     try {
-      const decoded = jwt.verify(token, config.accessTokenSecret) as { id: string; email: string; role: string };
+      const decoded = jwt.verify(token, config.accessTokenSecret) as {
+        id: string;
+        email: string;
+        role: string;
+      };
       return decoded;
     } catch (error) {
-      throw new AppError("Invalid or expired access token", 401);
+      throw new AppError('Invalid or expired access token', 401);
     }
   }
 
   async changePassword(userId: string, currentPassword: string, newPassword: string) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     const isCurrentPasswordValid = await bcrypt.compare(currentPassword, user.password);
     if (!isCurrentPasswordValid) {
-      throw new AppError("Current password is incorrect", 400);
+      throw new AppError('Current password is incorrect', 400);
     }
 
     const hashedNewPassword = await bcrypt.hash(newPassword, 12);
-    await this.userRepository.findByIdAndUpdate(userId, { 
+    await this.userRepository.findByIdAndUpdate(userId, {
       password: hashedNewPassword,
-      refreshTokens: [] // Clear all refresh tokens to force re-login
+      refreshTokens: [], // Clear all refresh tokens to force re-login
     });
 
-    return { message: "Password changed successfully" };
+    return { message: 'Password changed successfully' };
   }
 
   async getUserProfile(userId: string) {
     const user = await this.userRepository.findById(userId, '-password -refreshTokens');
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
     return user;
   }
@@ -190,40 +197,42 @@ export class AuthService {
     if (updateData.email) {
       const existingUser = await this.userRepository.findByEmail(updateData.email);
       if (existingUser && (existingUser._id as string).toString() !== userId) {
-        throw new AppError("Email already in use", 400);
+        throw new AppError('Email already in use', 400);
       }
     }
 
-    const user = await this.userRepository.findByIdAndUpdate(userId, updateData, { 
-      select: '-password -refreshTokens' 
+    const user = await this.userRepository.findByIdAndUpdate(userId, updateData, {
+      select: '-password -refreshTokens',
     });
-    
+
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     return user;
   }
 
   async cleanupAllExpiredTokens() {
-    const users = await this.userRepository.find({ refreshTokens: { $exists: true, $not: { $size: 0 } } });
+    const users = await this.userRepository.find({
+      refreshTokens: { $exists: true, $not: { $size: 0 } },
+    });
     let totalCleaned = 0;
     let usersAffected = 0;
 
     for (const user of users) {
       const originalCount = user.refreshTokens.length;
       const validTokensCount = await this.cleanupExpiredTokens(user);
-      
+
       if (validTokensCount < originalCount) {
         usersAffected++;
-        totalCleaned += (originalCount - validTokensCount);
+        totalCleaned += originalCount - validTokensCount;
       }
     }
 
-    return { 
-      usersAffected, 
+    return {
+      usersAffected,
       totalTokensRemoved: totalCleaned,
-      message: `Cleaned up ${totalCleaned} expired tokens from ${usersAffected} users`
+      message: `Cleaned up ${totalCleaned} expired tokens from ${usersAffected} users`,
     };
   }
 }

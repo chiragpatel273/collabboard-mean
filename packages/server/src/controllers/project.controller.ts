@@ -1,6 +1,6 @@
-import { Request, Response } from "express";
-import { asyncHandler } from "../middleware/error.middleware";
-import { projectService } from "../services/project.service";
+import { Request, Response } from 'express';
+import { asyncHandler } from '../middleware/error.middleware';
+import { projectService } from '../services/project.service';
 
 // Create project
 export const createProject = asyncHandler(async (req: Request, res: Response) => {
@@ -10,8 +10,8 @@ export const createProject = asyncHandler(async (req: Request, res: Response) =>
   const project = await projectService.createProject(name, description, userId);
 
   res.status(201).json({
-    message: "Project created successfully",
-    project
+    message: 'Project created successfully',
+    project,
   });
 });
 
@@ -24,8 +24,8 @@ export const getUserProjects = asyncHandler(async (req: Request, res: Response) 
   const result = await projectService.getUserProjects(userId, page, limit);
 
   res.json({
-    message: "Projects retrieved successfully",
-    ...result
+    message: 'Projects retrieved successfully',
+    ...result,
   });
 });
 
@@ -37,8 +37,8 @@ export const getProjectById = asyncHandler(async (req: Request, res: Response) =
   const project = await projectService.getProjectById(projectId, userId);
 
   res.json({
-    message: "Project retrieved successfully",
-    project
+    message: 'Project retrieved successfully',
+    project,
   });
 });
 
@@ -51,8 +51,8 @@ export const updateProject = asyncHandler(async (req: Request, res: Response) =>
   const project = await projectService.updateProject(projectId, userId, updateData);
 
   res.json({
-    message: "Project updated successfully",
-    project
+    message: 'Project updated successfully',
+    project,
   });
 });
 
@@ -65,8 +65,8 @@ export const addMemberToProject = asyncHandler(async (req: Request, res: Respons
   const project = await projectService.addMemberToProject(projectId, userId, email);
 
   res.json({
-    message: "Member added to project successfully",
-    project
+    message: 'Member added to project successfully',
+    project,
   });
 });
 
@@ -78,8 +78,8 @@ export const removeMemberFromProject = asyncHandler(async (req: Request, res: Re
   const project = await projectService.removeMemberFromProject(projectId, userId, memberId);
 
   res.json({
-    message: "Member removed from project successfully",
-    project
+    message: 'Member removed from project successfully',
+    project,
   });
 });
 
@@ -103,14 +103,14 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response) =
   if (!query) {
     return res.status(400).json({
       success: false,
-      message: "Search query is required"
+      message: 'Search query is required',
     });
   }
 
   const result = await projectService.searchProjects(userId, query, page, limit);
 
   res.json({
-    message: "Search completed successfully",
-    ...result
+    message: 'Search completed successfully',
+    ...result,
   });
 });

@@ -1,4 +1,4 @@
-import { Document, Model, FilterQuery, UpdateQuery, QueryOptions } from "mongoose";
+import { Document, Model, FilterQuery, UpdateQuery, QueryOptions } from 'mongoose';
 
 export abstract class BaseRepository<T extends Document> {
   protected model: Model<T>;
@@ -22,7 +22,7 @@ export abstract class BaseRepository<T extends Document> {
     let query = this.model.findById(id);
     if (populate) {
       if (Array.isArray(populate)) {
-        populate.forEach(path => query = query.populate(path));
+        populate.forEach((path) => (query = query.populate(path)));
       } else {
         query = query.populate(populate);
       }
@@ -34,7 +34,7 @@ export abstract class BaseRepository<T extends Document> {
     let query = this.model.findOne(filter);
     if (populate) {
       if (Array.isArray(populate)) {
-        populate.forEach(path => query = query.populate(path));
+        populate.forEach((path) => (query = query.populate(path)));
       } else {
         query = query.populate(populate);
       }
@@ -53,20 +53,20 @@ export abstract class BaseRepository<T extends Document> {
     } = {}
   ): Promise<T[]> {
     let query = this.model.find(filter);
-    
+
     if (options.populate) {
       if (Array.isArray(options.populate)) {
-        options.populate.forEach(path => query = query.populate(path));
+        options.populate.forEach((path) => (query = query.populate(path)));
       } else {
         query = query.populate(options.populate);
       }
     }
-    
+
     if (options.sort) query = query.sort(options.sort);
     if (options.limit) query = query.limit(options.limit);
     if (options.skip) query = query.skip(options.skip);
     if (options.select) query = query.select(options.select);
-    
+
     return await query.exec();
   }
 
@@ -89,10 +89,10 @@ export abstract class BaseRepository<T extends Document> {
     };
   }> {
     const skip = (page - 1) * limit;
-    
+
     const [documents, totalDocuments] = await Promise.all([
       this.find(filter, { ...options, limit, skip }),
-      this.countDocuments(filter)
+      this.countDocuments(filter),
     ]);
 
     return {
@@ -101,8 +101,8 @@ export abstract class BaseRepository<T extends Document> {
         currentPage: page,
         totalPages: Math.ceil(totalDocuments / limit),
         totalDocuments,
-        hasMore: skip + limit < totalDocuments
-      }
+        hasMore: skip + limit < totalDocuments,
+      },
     };
   }
 
@@ -130,7 +130,7 @@ export abstract class BaseRepository<T extends Document> {
     const result = await this.model.updateMany(filter, update);
     return {
       modifiedCount: result.modifiedCount,
-      matchedCount: result.matchedCount
+      matchedCount: result.matchedCount,
     };
   }
 
@@ -171,12 +171,12 @@ export abstract class BaseRepository<T extends Document> {
   ): Promise<T[]> {
     const searchFilter = {
       ...filter,
-      $text: { $search: searchTerm }
+      $text: { $search: searchTerm },
     };
 
     return await this.find(searchFilter, {
       ...options,
-      sort: { score: { $meta: 'textScore' } as any, ...options.sort }
+      sort: { score: { $meta: 'textScore' } as any, ...options.sort },
     });
   }
 }

@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { Request, Response, NextFunction } from "express";
+import { z } from 'zod';
+import { Request, Response, NextFunction } from 'express';
 
 // Generic validation middleware factory
 export const validate = (schema: z.ZodSchema) => {
@@ -11,19 +11,19 @@ export const validate = (schema: z.ZodSchema) => {
       if (error instanceof z.ZodError) {
         const errors = error.issues.map((err: any) => ({
           field: err.path.join('.'),
-          message: err.message
+          message: err.message,
         }));
         return res.status(400).json({
           success: false,
-          message: "Validation failed",
+          message: 'Validation failed',
           errors,
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
         });
       }
       return res.status(400).json({
         success: false,
-        message: "Validation failed",
-        timestamp: new Date().toISOString()
+        message: 'Validation failed',
+        timestamp: new Date().toISOString(),
       });
     }
   };

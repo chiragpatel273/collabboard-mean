@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from "express";
-import { UserRole } from "../models/user.model";
-import { AppError } from "./error.middleware";
+import { Request, Response, NextFunction } from 'express';
+import { UserRole } from '../models/user.model';
+import { AppError } from './error.middleware';
 
 interface AuthenticatedRequest extends Request {
   user: {
@@ -14,9 +14,9 @@ interface AuthenticatedRequest extends Request {
 export const requireRole = (...roles: UserRole[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as AuthenticatedRequest).user;
-    
+
     if (!user) {
-      throw new AppError("Authentication required", 401);
+      throw new AppError('Authentication required', 401);
     }
 
     if (!roles.includes(user.role)) {
@@ -39,7 +39,7 @@ export const requireOwnershipOrAdmin = (getUserId: (req: Request) => string) => 
     const resourceUserId = getUserId(req);
 
     if (!user) {
-      throw new AppError("Authentication required", 401);
+      throw new AppError('Authentication required', 401);
     }
 
     // Admin can access any resource, users can only access their own
@@ -47,7 +47,7 @@ export const requireOwnershipOrAdmin = (getUserId: (req: Request) => string) => 
       return next();
     }
 
-    throw new AppError("Access denied. You can only access your own resources", 403);
+    throw new AppError('Access denied. You can only access your own resources', 403);
   };
 };
 

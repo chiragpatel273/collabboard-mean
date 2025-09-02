@@ -1,4 +1,4 @@
-import { authService } from "./auth.service";
+import { authService } from './auth.service';
 
 class CleanupService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -6,12 +6,12 @@ class CleanupService {
 
   start() {
     if (this.intervalId) {
-      console.log("Cleanup service is already running");
+      console.log('Cleanup service is already running');
       return;
     }
 
-    console.log("Starting automatic token cleanup service (runs every 24 hours)");
-    
+    console.log('Starting automatic token cleanup service (runs every 24 hours)');
+
     // Run initial cleanup
     this.runCleanup();
 
@@ -25,23 +25,23 @@ class CleanupService {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log("Stopped automatic token cleanup service");
+      console.log('Stopped automatic token cleanup service');
     }
   }
 
   private async runCleanup() {
     try {
-      console.log("Running token cleanup...");
+      console.log('Running token cleanup...');
       const result = await authService.cleanupAllExpiredTokens();
       console.log(`Token cleanup completed: ${result.message}`);
     } catch (error) {
-      console.error("Error during token cleanup:", error);
+      console.error('Error during token cleanup:', error);
     }
   }
 
   // Manual cleanup trigger
   async manualCleanup() {
-    console.log("Running manual token cleanup...");
+    console.log('Running manual token cleanup...');
     return await authService.cleanupAllExpiredTokens();
   }
 }

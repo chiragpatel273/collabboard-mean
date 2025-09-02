@@ -1,7 +1,7 @@
-import { Request, Response } from "express";
-import { asyncHandler } from "../middleware/error.middleware";
-import { TaskStatus, TaskPriority } from "../models/task.model";
-import { taskService } from "../services/task.service";
+import { Request, Response } from 'express';
+import { asyncHandler } from '../middleware/error.middleware';
+import { TaskStatus, TaskPriority } from '../models/task.model';
+import { taskService } from '../services/task.service';
 
 // Create task
 export const createTask = asyncHandler(async (req: Request, res: Response) => {
@@ -20,8 +20,8 @@ export const createTask = asyncHandler(async (req: Request, res: Response) => {
   );
 
   res.status(201).json({
-    message: "Task created successfully",
-    task
+    message: 'Task created successfully',
+    task,
   });
 });
 
@@ -44,8 +44,8 @@ export const getTasksByProject = asyncHandler(async (req: Request, res: Response
   const result = await taskService.getTasksByProject(projectId, userId, filters, page, limit);
 
   res.json({
-    message: "Tasks retrieved successfully",
-    ...result
+    message: 'Tasks retrieved successfully',
+    ...result,
   });
 });
 
@@ -57,8 +57,8 @@ export const getTaskById = asyncHandler(async (req: Request, res: Response) => {
   const task = await taskService.getTaskById(taskId, userId);
 
   res.json({
-    message: "Task retrieved successfully",
-    task
+    message: 'Task retrieved successfully',
+    task,
   });
 });
 
@@ -76,8 +76,8 @@ export const updateTask = asyncHandler(async (req: Request, res: Response) => {
   const task = await taskService.updateTask(taskId, userId, updateData);
 
   res.json({
-    message: "Task updated successfully",
-    task
+    message: 'Task updated successfully',
+    task,
   });
 });
 
@@ -90,8 +90,8 @@ export const updateTaskStatus = asyncHandler(async (req: Request, res: Response)
   const task = await taskService.updateTaskStatus(taskId, userId, status);
 
   res.json({
-    message: "Task status updated successfully",
-    task
+    message: 'Task status updated successfully',
+    task,
   });
 });
 
@@ -104,8 +104,8 @@ export const assignTask = asyncHandler(async (req: Request, res: Response) => {
   const task = await taskService.assignTask(taskId, userId, assignedTo);
 
   res.json({
-    message: assignedTo ? "Task assigned successfully" : "Task unassigned successfully",
-    task
+    message: assignedTo ? 'Task assigned successfully' : 'Task unassigned successfully',
+    task,
   });
 });
 
@@ -118,8 +118,8 @@ export const getUserAssignedTasks = asyncHandler(async (req: Request, res: Respo
   const result = await taskService.getUserTasks(userId, page, limit);
 
   res.json({
-    message: "Assigned tasks retrieved successfully",
-    ...result
+    message: 'Assigned tasks retrieved successfully',
+    ...result,
   });
 });
 
@@ -144,7 +144,7 @@ export const searchTasks = asyncHandler(async (req: Request, res: Response) => {
   if (!query) {
     return res.status(400).json({
       success: false,
-      message: "Search query is required"
+      message: 'Search query is required',
     });
   }
 
@@ -154,7 +154,7 @@ export const searchTasks = asyncHandler(async (req: Request, res: Response) => {
   const result = await taskService.searchTasks(query, userId, filters, page, limit);
 
   res.json({
-    message: "Search completed successfully",
-    ...result
+    message: 'Search completed successfully',
+    ...result,
   });
 });

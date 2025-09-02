@@ -1,7 +1,7 @@
-import { UserRole } from "../models/user.model";
-import { AppError } from "../middleware/error.middleware";
-import { UserRepository } from "../repositories";
-import { authService } from "./auth.service";
+import { UserRole } from '../models/user.model';
+import { AppError } from '../middleware/error.middleware';
+import { UserRepository } from '../repositories';
+import { authService } from './auth.service';
 
 export class AdminService {
   private userRepository: UserRepository;
@@ -19,7 +19,7 @@ export class AdminService {
   async getUserById(userId: string) {
     const user = await this.userRepository.findById(userId, '-password -refreshTokens');
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
     return user;
   }
@@ -28,7 +28,7 @@ export class AdminService {
   async updateUserRole(userId: string, role: UserRole) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     const updatedUser = await this.userRepository.updateRole(userId, role);
@@ -39,7 +39,7 @@ export class AdminService {
   async toggleUserStatus(userId: string, isActive: boolean) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     let updatedUser;
@@ -56,19 +56,19 @@ export class AdminService {
   async deleteUser(userId: string) {
     const user = await this.userRepository.findById(userId);
     if (!user) {
-      throw new AppError("User not found", 404);
+      throw new AppError('User not found', 404);
     }
 
     // Prevent admins from deleting themselves
     if (user.role === UserRole.ADMIN) {
       const adminCount = await this.userRepository.countDocuments({ role: UserRole.ADMIN });
       if (adminCount <= 1) {
-        throw new AppError("Cannot delete the last admin user", 400);
+        throw new AppError('Cannot delete the last admin user', 400);
       }
     }
 
     await this.userRepository.findByIdAndDelete(userId);
-    return { message: "User deleted successfully" };
+    return { message: 'User deleted successfully' };
   }
 
   // Create admin user (super admin only or initial setup)
@@ -83,22 +83,22 @@ export class AdminService {
 
   // Search users
   async searchUsers(query: string, page: number = 1, limit: number = 10) {
-    const users = await this.userRepository.searchUsers(query, { 
-      limit, 
-      skip: (page - 1) * limit 
+    const users = await this.userRepository.searchUsers(query, {
+      limit,
+      skip: (page - 1) * limit,
     });
-    
+
     const total = users.length; // This is approximate - for exact count, would need separate query
-    
+
     return {
       users,
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(total / limit),
         totalUsers: total,
-        hasMore: users.length === limit
+        hasMore: users.length === limit,
       },
-      query
+      query,
     };
   }
 
@@ -125,5 +125,5 @@ export const {
   deleteUser,
   createAdminUser,
   getUserStats,
-  searchUsers
+  searchUsers,
 } = adminService;

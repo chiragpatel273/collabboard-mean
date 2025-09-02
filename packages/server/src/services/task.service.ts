@@ -1,7 +1,7 @@
-import { ITask, TaskStatus, TaskPriority } from "../models/task.model";
-import { AppError } from "../middleware/error.middleware";
-import { TaskRepository, ProjectRepository } from "../repositories";
-import mongoose from "mongoose";
+import { ITask, TaskStatus, TaskPriority } from '../models/task.model';
+import { AppError } from '../middleware/error.middleware';
+import { TaskRepository, ProjectRepository } from '../repositories';
+import mongoose from 'mongoose';
 
 export class TaskService {
   private taskRepository: TaskRepository;
@@ -25,7 +25,7 @@ export class TaskService {
     // Verify project exists and user has access
     const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, createdById);
     if (!hasAccess) {
-      throw new AppError("Access denied to this project", 403);
+      throw new AppError('Access denied to this project', 403);
     }
 
     const createdByObjectId = new mongoose.Types.ObjectId(createdById);
@@ -39,10 +39,14 @@ export class TaskService {
       projectId: projectObjectId,
       createdBy: createdByObjectId,
       dueDate,
-      tags
+      tags,
     });
 
-    return await this.taskRepository.findById(task._id as string, ['createdBy', 'assignedTo', 'projectId']) as ITask;
+    return (await this.taskRepository.findById(task._id as string, [
+      'createdBy',
+      'assignedTo',
+      'projectId',
+    ])) as ITask;
   }
 
   // Get tasks by project
@@ -61,33 +65,35 @@ export class TaskService {
     // Verify user has access to project
     const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
     if (!hasAccess) {
-      throw new AppError("Access denied to this project", 403);
+      throw new AppError('Access denied to this project', 403);
     }
 
-    return await this.taskRepository.findTasksWithPagination(
-      {},
-      page,
-      limit,
-      {
-        projectId,
-        assignedTo: filters.assignedTo,
-        status: filters.status,
-        priority: filters.priority
-      }
-    );
+    return await this.taskRepository.findTasksWithPagination({}, page, limit, {
+      projectId,
+      assignedTo: filters.assignedTo,
+      status: filters.status,
+      priority: filters.priority,
+    });
   }
 
   // Get task by ID
   async getTaskById(taskId: string, userId: string): Promise<ITask> {
-    const task = await this.taskRepository.findById(taskId, ['createdBy', 'assignedTo', 'projectId']);
+    const task = await this.taskRepository.findById(taskId, [
+      'createdBy',
+      'assignedTo',
+      'projectId',
+    ]);
     if (!task) {
-      throw new AppError("Task not found", 404);
+      throw new AppError('Task not found', 404);
     }
 
     // Verify user has access to the project this task belongs to
-    const hasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), userId);
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(
+      task.projectId.toString(),
+      userId
+    );
     if (!hasAccess) {
-      throw new AppError("Access denied to this task", 403);
+      throw new AppError('Access denied to this task', 403);
     }
 
     return task;
@@ -108,59 +114,59 @@ export class TaskService {
     const task = await this.getTaskById(taskId, userId);
 
     const updates: any = {};
-    const allowedUpdates = ["title", "description", "priority", "dueDate", "tags"];
-    
-    allowedUpdates.forEach(field => {
+    const allowedUpdates = ['title', 'description', 'priority', 'dueDate', 'tags'];
+
+    allowedUpdates.forEach((field) => {
       if (updateData[field as keyof typeof updateData] !== undefined) {
         updates[field] = updateData[field as keyof typeof updateData];
       }
     });
 
-    return await this.taskRepository.findByIdAndUpdate(taskId, updates, {
-      populate: ['createdBy', 'assignedTo', 'projectId']
-    }) as ITask;
+    return (await this.taskRepository.findByIdAndUpdate(taskId, updates, {
+      populate: ['createdBy', 'assignedTo', 'projectId'],
+    })) as ITask;
   }
 
   // Update task status
   async updateTaskStatus(taskId: string, userId: string, status: TaskStatus): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.updateStatus(taskId, status) as ITask;
+    return (await this.taskRepository.updateStatus(taskId, status)) as ITask;
   }
 
   // Assign task
   async assignTask(taskId: string, userId: string, assigneeId: string): Promise<ITask> {
     const task = await this.getTaskById(taskId, userId);
-    
+
     // Verify assignee has access to the project
-    const assigneeHasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), assigneeId);
+    const assigneeHasAccess = await this.projectRepository.isUserMemberOrOwner(
+      task.projectId.toString(),
+      assigneeId
+    );
     if (!assigneeHasAccess) {
-      throw new AppError("Assignee does not have access to this project", 400);
+      throw new AppError('Assignee does not have access to this project', 400);
     }
 
-    return await this.taskRepository.assignTask(taskId, assigneeId) as ITask;
+    return (await this.taskRepository.assignTask(taskId, assigneeId)) as ITask;
   }
 
   // Unassign task
   async unassignTask(taskId: string, userId: string): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.unassignTask(taskId) as ITask;
+    return (await this.taskRepository.unassignTask(taskId)) as ITask;
   }
 
   // Delete task
   async deleteTask(taskId: string, userId: string): Promise<{ message: string }> {
     await this.getTaskById(taskId, userId); // Verify access
     await this.taskRepository.findByIdAndDelete(taskId);
-    return { message: "Task deleted successfully" };
+    return { message: 'Task deleted successfully' };
   }
 
   // Get user's assigned tasks
   async getUserTasks(userId: string, page: number = 1, limit: number = 20) {
-    return await this.taskRepository.findTasksWithPagination(
-      {},
-      page,
-      limit,
-      { assignedTo: userId }
-    );
+    return await this.taskRepository.findTasksWithPagination({}, page, limit, {
+      assignedTo: userId,
+    });
   }
 
   // Get user dashboard
@@ -183,7 +189,7 @@ export class TaskService {
     const options = {
       projectId: filters.projectId,
       limit,
-      skip: (page - 1) * limit
+      skip: (page - 1) * limit,
     };
 
     const tasks = await this.taskRepository.searchTasks(searchTerm, options);
@@ -191,7 +197,10 @@ export class TaskService {
     // Filter tasks by user access (this could be optimized)
     const accessibleTasks = [];
     for (const task of tasks) {
-      const hasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), userId);
+      const hasAccess = await this.projectRepository.isUserMemberOrOwner(
+        task.projectId.toString(),
+        userId
+      );
       if (hasAccess) {
         accessibleTasks.push(task);
       }
@@ -203,9 +212,9 @@ export class TaskService {
         currentPage: page,
         totalPages: Math.ceil(accessibleTasks.length / limit),
         totalTasks: accessibleTasks.length,
-        hasMore: accessibleTasks.length === limit
+        hasMore: accessibleTasks.length === limit,
       },
-      searchTerm
+      searchTerm,
     };
   }
 
@@ -232,25 +241,25 @@ export class TaskService {
   // Update task priority
   async updateTaskPriority(taskId: string, userId: string, priority: TaskPriority): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.updatePriority(taskId, priority) as ITask;
+    return (await this.taskRepository.updatePriority(taskId, priority)) as ITask;
   }
 
   // Update task due date
   async updateTaskDueDate(taskId: string, userId: string, dueDate: Date | null): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.updateDueDate(taskId, dueDate) as ITask;
+    return (await this.taskRepository.updateDueDate(taskId, dueDate)) as ITask;
   }
 
   // Add tag to task
   async addTaskTag(taskId: string, userId: string, tag: string): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.addTag(taskId, tag) as ITask;
+    return (await this.taskRepository.addTag(taskId, tag)) as ITask;
   }
 
   // Remove tag from task
   async removeTaskTag(taskId: string, userId: string, tag: string): Promise<ITask> {
     await this.getTaskById(taskId, userId); // Verify access
-    return await this.taskRepository.removeTag(taskId, tag) as ITask;
+    return (await this.taskRepository.removeTag(taskId, tag)) as ITask;
   }
 
   // Get tasks by tags
@@ -263,7 +272,7 @@ export class TaskService {
     // Verify user has access to project
     const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
     if (!hasAccess) {
-      throw new AppError("Access denied to this project", 403);
+      throw new AppError('Access denied to this project', 403);
     }
 
     return await this.taskRepository.getProjectTaskStats(projectId);
@@ -274,7 +283,7 @@ export class TaskService {
     // Verify user has access to project
     const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
     if (!hasAccess) {
-      throw new AppError("Access denied to this project", 403);
+      throw new AppError('Access denied to this project', 403);
     }
 
     return await this.taskRepository.getTaskCompletion(projectId, period);
