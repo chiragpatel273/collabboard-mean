@@ -1,12 +1,12 @@
-import { User, IUser } from "../models/user.model";
+import { User, IUser, UserRole } from "../models/user.model";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config";
 import { AppError } from "../middleware/error.middleware";
 
-const generateAccessToken = (userId: string, email: string) => {
+const generateAccessToken = (userId: string, email: string, role: string) => {
   return jwt.sign(
-    { id: userId, email },
+    { id: userId, email, role },
     config.accessTokenSecret,
     { expiresIn: "15m" } // Short-lived access token
   );
@@ -42,18 +42,25 @@ const cleanupExpiredTokens = async (user: IUser) => {
   return validTokens.length;
 };
 
-export const register = async (name: string, email: string, password: string) => {
+export const register = async (name: string, email: string, password: string, role: UserRole = UserRole.USER) => {
   const existingUser = await User.findOne({ email });
   if (existingUser) {
     throw new AppError("User already exists with this email", 400);
   }
 
   const hashedPassword = await bcrypt.hash(password, 12);
-  const user = new User({ name, email, password: hashedPassword, refreshTokens: [] });
+  const user = new User({ 
+    name, 
+    email, 
+    password: hashedPassword, 
+    role,
+    refreshTokens: [],
+    isActive: true
+  });
   await user.save();
 
   // Generate tokens
-  const accessToken = generateAccessToken(user._id as string, user.email);
+  const accessToken = generateAccessToken(user._id as string, user.email, user.role);
   const refreshToken = generateRefreshToken(user._id as string);
 
   // Save refresh token to user
@@ -74,11 +81,18 @@ export const login = async (email: string, password: string) => {
     throw new AppError("Invalid email or password", 401);
   }
 
+  if (!user.isActive) {
+    throw new AppError("Account has been deactivated", 401);
+  }
+
+  // Update last login
+  user.lastLogin = new Date();
+
   // Clean up expired tokens before adding new one
   await cleanupExpiredTokens(user);
 
   // Generate tokens
-  const accessToken = generateAccessToken(user._id as string, user.email);
+  const accessToken = generateAccessToken(user._id as string, user.email, user.role);
   const refreshToken = generateRefreshToken(user._id as string);
 
   // Save refresh token to user
@@ -105,7 +119,7 @@ export const refreshToken = async (token: string) => {
     await cleanupExpiredTokens(user);
 
     // Generate new access token
-    const accessToken = generateAccessToken(user._id as string, user.email);
+    const accessToken = generateAccessToken(user._id as string, user.email, user.role);
     
     return { accessToken, user };
   } catch (error) {

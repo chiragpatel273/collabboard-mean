@@ -10,6 +10,7 @@ import { cleanupService } from "./services/cleanup.service";
 
 // Routes
 import authRoutes from "./routes/auth.routes";
+import adminRoutes from "./routes/admin.routes";
 import healthRoutes from "./routes/health.routes";
 
 const app: Application = express();
@@ -32,6 +33,7 @@ app.use(morgan(configService.isDevelopment() ? "dev" : "combined"));
 
 // Routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api", healthRoutes);
 
 // Root health check

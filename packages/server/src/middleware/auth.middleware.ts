@@ -1,8 +1,9 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import { config } from "../config/config";
+import { User } from "../models/user.model";
 
-export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+export const authMiddleware = async (req: Request, res: Response, next: NextFunction) => {
   const token = req.headers["authorization"]?.split(" ")[1];
   
   if (!token) {
@@ -25,7 +26,31 @@ export const authMiddleware = (req: Request, res: Response, next: NextFunction) 
       });
     }
     
-    (req as any).user = decoded;
+    // Get user details including role and active status
+    const user = await User.findById(decoded.id).select('-password -refreshTokens');
+    if (!user) {
+      return res.status(401).json({ 
+        success: false,
+        message: "User not found",
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (!user.isActive) {
+      return res.status(401).json({ 
+        success: false,
+        message: "Account has been deactivated",
+        timestamp: new Date().toISOString()
+      });
+    }
+    
+    (req as any).user = {
+      id: (user._id as any).toString(),
+      email: user.email,
+      name: user.name,
+      role: user.role
+    };
+    
     next();
   } catch (err) {
     return res.status(401).json({ 
