@@ -1,15 +1,17 @@
-import { IProject } from '../models/project.model';
-import { AppError } from '../middleware/error.middleware';
-import { ProjectRepository, UserRepository } from '../repositories';
 import mongoose from 'mongoose';
+import { AppError } from '../middleware/error.middleware';
+import { IProject } from '../models/project.model';
+import { ProjectRepository, TaskRepository, UserRepository } from '../repositories';
 
 export class ProjectService {
   private projectRepository: ProjectRepository;
   private userRepository: UserRepository;
+  private taskRepository: TaskRepository;
 
   constructor() {
     this.projectRepository = new ProjectRepository();
     this.userRepository = new UserRepository();
+    this.taskRepository = new TaskRepository();
   }
 
   // Create new project
@@ -199,6 +201,38 @@ export class ProjectService {
   // Get project statistics
   async getProjectStats() {
     return await this.projectRepository.getProjectStats();
+  }
+
+  // Get project task statistics for a specific project
+  async getProjectTaskStats(projectId: string, userId: string) {
+    // Verify user has access to project
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
+    if (!hasAccess) {
+      throw new AppError('Access denied to this project', 403);
+    }
+
+    return await this.taskRepository.getProjectTaskStats(projectId);
+  }
+
+  // Get user's project overview statistics
+  async getUserProjectStats(userId: string) {
+    const userProjects = await this.projectRepository.findProjectsWithPagination({}, 1, 1000, {
+      userId,
+    });
+    const totalProjects = userProjects.pagination.totalDocuments;
+    const activeProjects = userProjects.documents.filter((p) => p.isActive).length;
+    const recentProjects = userProjects.documents.filter((p) => {
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return new Date(p.createdAt) > weekAgo;
+    }).length;
+
+    return {
+      totalProjects,
+      activeProjects,
+      deletedProjects: totalProjects - activeProjects,
+      recentProjects,
+    };
   }
 
   // Update project activity timestamp

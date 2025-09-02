@@ -57,6 +57,7 @@ export class DashboardComponent implements OnInit {
     return new Promise((resolve) => {
       this.dashboardService.getUserDashboard().subscribe({
         next: (response) => {
+          console.log('Dashboard data received:', response);
           this.dashboardData = response.dashboard;
           resolve();
         },
@@ -72,6 +73,7 @@ export class DashboardComponent implements OnInit {
     return new Promise((resolve) => {
       this.projectService.getUserProjects(1, 5).subscribe({
         next: (response) => {
+          console.log('Recent projects received:', response);
           this.recentProjects = response.documents;
           resolve();
         },
@@ -96,6 +98,18 @@ export class DashboardComponent implements OnInit {
         },
       });
     });
+  }
+
+  // Check if dashboard is empty (no meaningful data to show)
+  isEmpty(): boolean {
+    const hasProjects = this.recentProjects && this.recentProjects.length > 0;
+    const hasTasks =
+      this.dashboardData &&
+      (this.dashboardData.totalAssigned > 0 ||
+        this.dashboardData.assignedTasks.length > 0 ||
+        this.dashboardData.completedThisWeek.length > 0);
+
+    return !hasProjects && !hasTasks;
   }
 
   getPriorityClass(priority: TaskPriority): string {

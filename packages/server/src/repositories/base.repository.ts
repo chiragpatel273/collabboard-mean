@@ -1,4 +1,4 @@
-import { Document, Model, FilterQuery, UpdateQuery, QueryOptions } from 'mongoose';
+import { Document, FilterQuery, Model, QueryOptions, UpdateQuery } from 'mongoose';
 
 export abstract class BaseRepository<T extends Document> {
   protected model: Model<T>;
@@ -106,21 +106,40 @@ export abstract class BaseRepository<T extends Document> {
     };
   }
 
-  // Update operations
   async findByIdAndUpdate(
     id: string,
     update: UpdateQuery<T>,
-    options: QueryOptions = { new: true, runValidators: true }
+    options: QueryOptions & { populate?: string | string[] } = { new: true, runValidators: true }
   ): Promise<T | null> {
-    return await this.model.findByIdAndUpdate(id, update, options);
+    let query = this.model.findByIdAndUpdate(id, update, options);
+
+    if (options.populate) {
+      if (Array.isArray(options.populate)) {
+        options.populate.forEach((path) => (query = query.populate(path as string)));
+      } else {
+        query = query.populate(options.populate as string);
+      }
+    }
+
+    return await query.exec();
   }
 
   async findOneAndUpdate(
     filter: FilterQuery<T>,
     update: UpdateQuery<T>,
-    options: QueryOptions = { new: true, runValidators: true }
+    options: QueryOptions & { populate?: string | string[] } = { new: true, runValidators: true }
   ): Promise<T | null> {
-    return await this.model.findOneAndUpdate(filter, update, options);
+    let query = this.model.findOneAndUpdate(filter, update, options);
+
+    if (options.populate) {
+      if (Array.isArray(options.populate)) {
+        options.populate.forEach((path) => (query = query.populate(path as string)));
+      } else {
+        query = query.populate(options.populate as string);
+      }
+    }
+
+    return await query.exec();
   }
 
   async updateMany(

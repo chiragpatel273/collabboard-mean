@@ -114,3 +114,31 @@ export const searchProjects = asyncHandler(async (req: Request, res: Response) =
     ...result,
   });
 });
+
+// Get project statistics for a specific project
+export const getProjectStats = asyncHandler(async (req: Request, res: Response) => {
+  const { projectId } = req.params;
+  const userId = (req as any).user.id;
+
+  // Verify user has access to the project
+  await projectService.getProjectById(projectId, userId);
+
+  const stats = await projectService.getProjectTaskStats(projectId, userId);
+
+  res.json({
+    message: 'Project statistics retrieved successfully',
+    stats,
+  });
+});
+
+// Get overall project overview/stats
+export const getProjectOverview = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  const stats = await projectService.getUserProjectStats(userId);
+
+  res.json({
+    message: 'Project overview retrieved successfully',
+    stats,
+  });
+});

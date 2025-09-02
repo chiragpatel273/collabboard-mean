@@ -1,7 +1,7 @@
-import { ITask, TaskStatus, TaskPriority } from '../models/task.model';
-import { AppError } from '../middleware/error.middleware';
-import { TaskRepository, ProjectRepository } from '../repositories';
 import mongoose from 'mongoose';
+import { AppError } from '../middleware/error.middleware';
+import { ITask, TaskPriority, TaskStatus } from '../models/task.model';
+import { ProjectRepository, TaskRepository } from '../repositories';
 
 export class TaskService {
   private taskRepository: TaskRepository;
@@ -87,11 +87,14 @@ export class TaskService {
       throw new AppError('Task not found', 404);
     }
 
+    // Extract project ID, handling both ObjectId and populated Project cases
+    const projectId =
+      typeof task.projectId === 'string'
+        ? task.projectId
+        : task.projectId._id?.toString() || task.projectId.toString();
+
     // Verify user has access to the project this task belongs to
-    const hasAccess = await this.projectRepository.isUserMemberOrOwner(
-      task.projectId.toString(),
-      userId
-    );
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
     if (!hasAccess) {
       throw new AppError('Access denied to this task', 403);
     }
@@ -137,9 +140,15 @@ export class TaskService {
   async assignTask(taskId: string, userId: string, assigneeId: string): Promise<ITask> {
     const task = await this.getTaskById(taskId, userId);
 
+    // Extract project ID, handling both ObjectId and populated Project cases
+    const projectId =
+      typeof task.projectId === 'string'
+        ? task.projectId
+        : task.projectId._id?.toString() || task.projectId.toString();
+
     // Verify assignee has access to the project
     const assigneeHasAccess = await this.projectRepository.isUserMemberOrOwner(
-      task.projectId.toString(),
+      projectId,
       assigneeId
     );
     if (!assigneeHasAccess) {
@@ -197,10 +206,13 @@ export class TaskService {
     // Filter tasks by user access (this could be optimized)
     const accessibleTasks = [];
     for (const task of tasks) {
-      const hasAccess = await this.projectRepository.isUserMemberOrOwner(
-        task.projectId.toString(),
-        userId
-      );
+      // Extract project ID, handling both ObjectId and populated Project cases
+      const projectId =
+        typeof task.projectId === 'string'
+          ? task.projectId
+          : task.projectId._id?.toString() || task.projectId.toString();
+
+      const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
       if (hasAccess) {
         accessibleTasks.push(task);
       }

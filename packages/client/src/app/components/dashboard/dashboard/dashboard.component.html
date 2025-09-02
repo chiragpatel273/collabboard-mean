@@ -18,179 +18,233 @@
   </div>
 
   <div class="dashboard-content" *ngIf="!isLoading">
-    <!-- Overview Cards -->
-    <div class="overview-grid">
-      <div class="overview-card">
-        <div class="card-header">
-          <h3>Assigned Tasks</h3>
-          <i class="icon-tasks"></i>
+    <!-- Empty State - Show when no data available -->
+    <div class="empty-dashboard" *ngIf="isEmpty()">
+      <div class="empty-state-container">
+        <div class="empty-icon">
+          <i class="icon-dashboard-empty">📊</i>
         </div>
-        <div class="card-content">
-          <div class="stat-number">{{ dashboardData?.totalAssigned || 0 }}</div>
-          <div class="stat-label">Total assigned to you</div>
-        </div>
-      </div>
-
-      <div class="overview-card">
-        <div class="card-header">
-          <h3>Completed This Week</h3>
-          <i class="icon-check"></i>
-        </div>
-        <div class="card-content">
-          <div class="stat-number">{{ dashboardData?.completedThisWeek?.length || 0 }}</div>
-          <div class="stat-label">Tasks completed</div>
-          <div class="progress-bar">
-            <div class="progress-fill" [style.width.%]="getCompletionPercentage()"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="overview-card warning" *ngIf="dashboardData?.overdueTasks?.length">
-        <div class="card-header">
-          <h3>Overdue Tasks</h3>
-          <i class="icon-warning"></i>
-        </div>
-        <div class="card-content">
-          <div class="stat-number">{{ dashboardData?.overdueTasks?.length || 0 }}</div>
-          <div class="stat-label">Need attention</div>
-        </div>
-      </div>
-
-      <div class="overview-card info">
-        <div class="card-header">
-          <h3>Due Soon</h3>
-          <i class="icon-clock"></i>
-        </div>
-        <div class="card-content">
-          <div class="stat-number">{{ dashboardData?.dueSoonTasks?.length || 0 }}</div>
-          <div class="stat-label">Next 7 days</div>
-        </div>
-      </div>
-
-      <div class="overview-card" *ngIf="projectOverview">
-        <div class="card-header">
-          <h3>Active Projects</h3>
-          <i class="icon-project"></i>
-        </div>
-        <div class="card-content">
-          <div class="stat-number">{{ projectOverview.activeProjects }}</div>
-          <div class="stat-label">of {{ projectOverview.totalProjects }} total</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Content Grid -->
-    <div class="content-grid">
-      <!-- Recent Tasks -->
-      <div class="dashboard-section">
-        <div class="section-header">
-          <h2>Your Recent Tasks</h2>
-          <a routerLink="/projects" class="section-link">View all tasks →</a>
+        <h2>Welcome to CollabBoard!</h2>
+        <p>Get started by creating your first project and adding some tasks.</p>
+        <div class="empty-actions">
+          <button class="btn-primary" routerLink="/projects/new">
+            <i class="icon-plus">➕</i>
+            Create Your First Project
+          </button>
+          <button class="btn-secondary" routerLink="/projects">
+            <i class="icon-projects">📂</i>
+            Browse Projects
+          </button>
         </div>
 
-        <div class="tasks-list" *ngIf="dashboardData?.assignedTasks?.length; else noTasks">
-          <div
-            class="task-item"
-            *ngFor="let task of dashboardData!.assignedTasks.slice(0, 5)"
-            [class.overdue]="isTaskOverdue(task)"
-          >
-            <div class="task-content">
-              <div class="task-header">
-                <h4 class="task-title">{{ task.title }}</h4>
-                <span class="task-priority" [ngClass]="getPriorityClass(task.priority)">
-                  {{ task.priority }}
-                </span>
+        <div class="getting-started">
+          <h3>Getting Started</h3>
+          <div class="steps">
+            <div class="step">
+              <div class="step-number">1</div>
+              <div class="step-content">
+                <h4>Create a Project</h4>
+                <p>Start by creating a project to organize your work</p>
               </div>
-              <p class="task-description" *ngIf="task.description">{{ task.description }}</p>
-              <div class="task-meta">
-                <span class="task-status" [ngClass]="getStatusClass(task.status)">
-                  {{ task.status | titlecase }}
-                </span>
-                <span class="task-project" *ngIf="task.projectId">
-                  {{ task.projectId.name }}
-                </span>
-                <span class="task-due" *ngIf="task.dueDate"> Due: {{ formatDate(task.dueDate) }} </span>
+            </div>
+            <div class="step">
+              <div class="step-number">2</div>
+              <div class="step-content">
+                <h4>Add Tasks</h4>
+                <p>Break down your project into manageable tasks</p>
+              </div>
+            </div>
+            <div class="step">
+              <div class="step-number">3</div>
+              <div class="step-content">
+                <h4>Track Progress</h4>
+                <p>Use the Kanban board to track your progress</p>
               </div>
             </div>
           </div>
         </div>
-
-        <ng-template #noTasks>
-          <div class="empty-state">
-            <i class="icon-tasks-empty"></i>
-            <h3>No tasks assigned</h3>
-            <p>You're all caught up! Check your projects for new tasks.</p>
-          </div>
-        </ng-template>
       </div>
+    </div>
 
-      <!-- Recent Projects -->
-      <div class="dashboard-section">
-        <div class="section-header">
-          <h2>Recent Projects</h2>
-          <a routerLink="/projects" class="section-link">View all projects →</a>
+    <!-- Dashboard Content - Show when data is available -->
+    <div class="dashboard-data" *ngIf="!isEmpty()">
+      <!-- Overview Cards -->
+      <div class="overview-grid">
+        <div class="overview-card">
+          <div class="card-header">
+            <h3>Assigned Tasks</h3>
+            <i class="icon-tasks"></i>
+          </div>
+          <div class="card-content">
+            <div class="stat-number">{{ dashboardData?.totalAssigned || 0 }}</div>
+            <div class="stat-label">Total assigned to you</div>
+          </div>
         </div>
 
-        <div class="projects-list" *ngIf="recentProjects.length; else noProjects">
-          <div class="project-item" *ngFor="let project of recentProjects">
-            <div class="project-content" [routerLink]="'/projects/' + project._id">
-              <div class="project-header">
-                <h4 class="project-title">{{ project.name }}</h4>
-              </div>
-              <p class="project-description" *ngIf="project.description">
-                {{ project.description }}
-              </p>
-              <div class="project-meta">
-                <span class="project-members"> {{ project.members.length || 0 }} members </span>
-                <span class="project-updated"> Updated {{ formatDate(project.updatedAt.toString()) }} </span>
-              </div>
+        <div class="overview-card">
+          <div class="card-header">
+            <h3>Completed This Week</h3>
+            <i class="icon-check"></i>
+          </div>
+          <div class="card-content">
+            <div class="stat-number">{{ dashboardData?.completedThisWeek?.length || 0 }}</div>
+            <div class="stat-label">Tasks completed</div>
+            <div class="progress-bar">
+              <div class="progress-fill" [style.width.%]="getCompletionPercentage()"></div>
             </div>
           </div>
         </div>
 
-        <ng-template #noProjects>
-          <div class="empty-state">
-            <i class="icon-projects-empty"></i>
-            <h3>No recent projects</h3>
-            <p>Start by creating your first project!</p>
-            <button class="btn-primary" routerLink="/projects">Create Project</button>
-          </div>
-        </ng-template>
-      </div>
-    </div>
-
-    <!-- Quick Actions -->
-    <div class="quick-actions" *ngIf="dashboardData?.overdueTasks?.length || dashboardData?.dueSoonTasks?.length">
-      <h2>Quick Actions</h2>
-      <div class="actions-grid">
-        <div class="action-card urgent" *ngIf="dashboardData?.overdueTasks?.length">
-          <div class="action-header">
+        <div class="overview-card warning" *ngIf="dashboardData?.overdueTasks?.length">
+          <div class="card-header">
+            <h3>Overdue Tasks</h3>
             <i class="icon-warning"></i>
-            <h3>Overdue Tasks ({{ dashboardData!.overdueTasks.length }})</h3>
           </div>
-          <div class="action-list">
-            <div class="action-item" *ngFor="let task of dashboardData!.overdueTasks.slice(0, 3)">
-              <span class="task-name">{{ task.title }}</span>
-              <span class="task-overdue">{{ formatDate(task.dueDate) }}</span>
-            </div>
+          <div class="card-content">
+            <div class="stat-number">{{ dashboardData?.overdueTasks?.length || 0 }}</div>
+            <div class="stat-label">Need attention</div>
           </div>
-          <button class="action-btn">Review Overdue Tasks</button>
         </div>
 
-        <div class="action-card info" *ngIf="dashboardData?.dueSoonTasks?.length">
-          <div class="action-header">
+        <div class="overview-card info">
+          <div class="card-header">
+            <h3>Due Soon</h3>
             <i class="icon-clock"></i>
-            <h3>Due Soon ({{ dashboardData!.dueSoonTasks.length }})</h3>
           </div>
-          <div class="action-list">
-            <div class="action-item" *ngFor="let task of dashboardData!.dueSoonTasks.slice(0, 3)">
-              <span class="task-name">{{ task.title }}</span>
-              <span class="task-due-soon">{{ formatDate(task.dueDate) }}</span>
+          <div class="card-content">
+            <div class="stat-number">{{ dashboardData?.dueSoonTasks?.length || 0 }}</div>
+            <div class="stat-label">Next 7 days</div>
+          </div>
+        </div>
+
+        <div class="overview-card" *ngIf="projectOverview">
+          <div class="card-header">
+            <h3>Active Projects</h3>
+            <i class="icon-project"></i>
+          </div>
+          <div class="card-content">
+            <div class="stat-number">{{ projectOverview.activeProjects }}</div>
+            <div class="stat-label">of {{ projectOverview.totalProjects }} total</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content Grid -->
+      <div class="content-grid">
+        <!-- Recent Tasks -->
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h2>Your Recent Tasks</h2>
+            <a routerLink="/projects" class="section-link">View all tasks →</a>
+          </div>
+
+          <div class="tasks-list" *ngIf="dashboardData?.assignedTasks?.length; else noTasks">
+            <div
+              class="task-item"
+              *ngFor="let task of dashboardData!.assignedTasks.slice(0, 5)"
+              [class.overdue]="isTaskOverdue(task)"
+            >
+              <div class="task-content">
+                <div class="task-header">
+                  <h4 class="task-title">{{ task.title }}</h4>
+                  <span class="task-priority" [ngClass]="getPriorityClass(task.priority)">
+                    {{ task.priority }}
+                  </span>
+                </div>
+                <p class="task-description" *ngIf="task.description">{{ task.description }}</p>
+                <div class="task-meta">
+                  <span class="task-status" [ngClass]="getStatusClass(task.status)">
+                    {{ task.status | titlecase }}
+                  </span>
+                  <span class="task-project" *ngIf="task.projectId">
+                    {{ task.projectId.name }}
+                  </span>
+                  <span class="task-due" *ngIf="task.dueDate"> Due: {{ formatDate(task.dueDate) }} </span>
+                </div>
+              </div>
             </div>
           </div>
-          <button class="action-btn">Plan Your Week</button>
+
+          <ng-template #noTasks>
+            <div class="empty-state">
+              <i class="icon-tasks-empty"></i>
+              <h3>No tasks assigned</h3>
+              <p>You're all caught up! Check your projects for new tasks.</p>
+            </div>
+          </ng-template>
+        </div>
+
+        <!-- Recent Projects -->
+        <div class="dashboard-section">
+          <div class="section-header">
+            <h2>Recent Projects</h2>
+            <a routerLink="/projects" class="section-link">View all projects →</a>
+          </div>
+
+          <div class="projects-list" *ngIf="recentProjects.length; else noProjects">
+            <div class="project-item" *ngFor="let project of recentProjects">
+              <div class="project-content" [routerLink]="'/projects/' + project._id">
+                <div class="project-header">
+                  <h4 class="project-title">{{ project.name }}</h4>
+                </div>
+                <p class="project-description" *ngIf="project.description">
+                  {{ project.description }}
+                </p>
+                <div class="project-meta">
+                  <span class="project-members"> {{ project.members.length || 0 }} members </span>
+                  <span class="project-updated"> Updated {{ formatDate(project.updatedAt.toString()) }} </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <ng-template #noProjects>
+            <div class="empty-state">
+              <i class="icon-projects-empty"></i>
+              <h3>No recent projects</h3>
+              <p>Start by creating your first project!</p>
+              <button class="btn-primary" routerLink="/projects">Create Project</button>
+            </div>
+          </ng-template>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions" *ngIf="dashboardData?.overdueTasks?.length || dashboardData?.dueSoonTasks?.length">
+        <h2>Quick Actions</h2>
+        <div class="actions-grid">
+          <div class="action-card urgent" *ngIf="dashboardData?.overdueTasks?.length">
+            <div class="action-header">
+              <i class="icon-warning"></i>
+              <h3>Overdue Tasks ({{ dashboardData!.overdueTasks.length }})</h3>
+            </div>
+            <div class="action-list">
+              <div class="action-item" *ngFor="let task of dashboardData!.overdueTasks.slice(0, 3)">
+                <span class="task-name">{{ task.title }}</span>
+                <span class="task-overdue">{{ formatDate(task.dueDate) }}</span>
+              </div>
+            </div>
+            <button class="action-btn">Review Overdue Tasks</button>
+          </div>
+
+          <div class="action-card info" *ngIf="dashboardData?.dueSoonTasks?.length">
+            <div class="action-header">
+              <i class="icon-clock"></i>
+              <h3>Due Soon ({{ dashboardData!.dueSoonTasks.length }})</h3>
+            </div>
+            <div class="action-list">
+              <div class="action-item" *ngFor="let task of dashboardData!.dueSoonTasks.slice(0, 3)">
+                <span class="task-name">{{ task.title }}</span>
+                <span class="task-due-soon">{{ formatDate(task.dueDate) }}</span>
+              </div>
+            </div>
+            <button class="action-btn">Plan Your Week</button>
+          </div>
         </div>
       </div>
     </div>
+    <!-- End dashboard-data -->
   </div>
+  <!-- End dashboard-content -->
 </div>
+<!-- End dashboard-container -->
