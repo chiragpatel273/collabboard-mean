@@ -1,4 +1,4 @@
-import { cleanupAllExpiredTokens } from "./auth.service";
+import { authService } from "./auth.service";
 
 class CleanupService {
   private intervalId: NodeJS.Timeout | null = null;
@@ -32,7 +32,7 @@ class CleanupService {
   private async runCleanup() {
     try {
       console.log("Running token cleanup...");
-      const result = await cleanupAllExpiredTokens();
+      const result = await authService.cleanupAllExpiredTokens();
       console.log(`Token cleanup completed: ${result.message}`);
     } catch (error) {
       console.error("Error during token cleanup:", error);
@@ -42,7 +42,7 @@ class CleanupService {
   // Manual cleanup trigger
   async manualCleanup() {
     console.log("Running manual token cleanup...");
-    return await cleanupAllExpiredTokens();
+    return await authService.cleanupAllExpiredTokens();
   }
 }
 

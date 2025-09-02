@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../middleware/error.middleware";
-import * as projectService from "../services/project.service";
+import { projectService } from "../services/project.service";
 
 // Create project
 export const createProject = asyncHandler(async (req: Request, res: Response) => {

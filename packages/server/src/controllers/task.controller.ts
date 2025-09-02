@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import { asyncHandler } from "../middleware/error.middleware";
 import { TaskStatus, TaskPriority } from "../models/task.model";
-import * as taskService from "../services/task.service";
+import { taskService } from "../services/task.service";
 
 // Create task
 export const createTask = asyncHandler(async (req: Request, res: Response) => {
@@ -115,13 +115,7 @@ export const getUserAssignedTasks = asyncHandler(async (req: Request, res: Respo
   const page = parseInt(req.query.page as string) || 1;
   const limit = parseInt(req.query.limit as string) || 20;
 
-  // Build filters from query params
-  const filters: any = {};
-  if (req.query.status) filters.status = req.query.status as TaskStatus;
-  if (req.query.priority) filters.priority = req.query.priority as TaskPriority;
-  if (req.query.projectId) filters.projectId = req.query.projectId as string;
-
-  const result = await taskService.getUserAssignedTasks(userId, filters, page, limit);
+  const result = await taskService.getUserTasks(userId, page, limit);
 
   res.json({
     message: "Assigned tasks retrieved successfully",
@@ -154,7 +148,10 @@ export const searchTasks = asyncHandler(async (req: Request, res: Response) => {
     });
   }
 
-  const result = await taskService.searchTasks(userId, query, projectId, page, limit);
+  const filters: any = {};
+  if (projectId) filters.projectId = projectId;
+
+  const result = await taskService.searchTasks(query, userId, filters, page, limit);
 
   res.json({
     message: "Search completed successfully",

@@ -1,371 +1,295 @@
-import { Task, ITask, TaskStatus, TaskPriority } from "../models/task.model";
-import { Project } from "../models/project.model";
+import { ITask, TaskStatus, TaskPriority } from "../models/task.model";
 import { AppError } from "../middleware/error.middleware";
+import { TaskRepository, ProjectRepository } from "../repositories";
 import mongoose from "mongoose";
 
-// Create new task
-export const createTask = async (
-  title: string,
-  description: string | undefined,
-  projectId: string,
-  createdById: string,
-  priority: TaskPriority = TaskPriority.MEDIUM,
-  dueDate?: Date,
-  tags: string[] = []
-): Promise<ITask> => {
-  // Verify project exists and user has access
-  const project = await Project.findById(projectId);
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
+export class TaskService {
+  private taskRepository: TaskRepository;
+  private projectRepository: ProjectRepository;
+
+  constructor() {
+    this.taskRepository = new TaskRepository();
+    this.projectRepository = new ProjectRepository();
   }
 
-  const hasAccess = project.ownerId.toString() === createdById || 
-                   project.members.some(member => member.toString() === createdById);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this project", 403);
-  }
-
-  const task = new Task({
-    title,
-    description,
-    status: TaskStatus.TODO,
-    priority,
-    projectId,
-    createdBy: createdById,
-    dueDate,
-    tags
-  });
-
-  await task.save();
-  
-  return await Task.findById(task._id)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name") as ITask;
-};
-
-// Get tasks by project
-export const getTasksByProject = async (
-  projectId: string,
-  userId: string,
-  filters: {
-    status?: TaskStatus;
-    assignedTo?: string;
-    priority?: TaskPriority;
-    tags?: string[];
-  } = {},
-  page: number = 1,
-  limit: number = 20
-) => {
-  // Verify user has access to project
-  const project = await Project.findById(projectId);
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
-  }
-
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some(member => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this project", 403);
-  }
-
-  // Build query
-  const query: any = { projectId };
-  
-  if (filters.status) query.status = filters.status;
-  if (filters.assignedTo) query.assignedTo = filters.assignedTo;
-  if (filters.priority) query.priority = filters.priority;
-  if (filters.tags && filters.tags.length > 0) {
-    query.tags = { $in: filters.tags };
-  }
-
-  const skip = (page - 1) * limit;
-
-  const tasks = await Task.find(query)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
-
-  const total = await Task.countDocuments(query);
-
-  return {
-    tasks,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalTasks: total,
-      hasMore: skip + limit < total
-    }
-  };
-};
-
-// Get task by ID
-export const getTaskById = async (taskId: string, userId: string): Promise<ITask> => {
-  const task = await Task.findById(taskId)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name ownerId members");
-
-  if (!task) {
-    throw new AppError("Task not found", 404);
-  }
-
-  // Verify user has access to the project
-  const project = task.projectId as any;
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some((member: any) => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this task", 403);
-  }
-
-  return task;
-};
-
-// Update task
-export const updateTask = async (
-  taskId: string,
-  userId: string,
-  updateData: Partial<ITask>
-): Promise<ITask> => {
-  const task = await Task.findById(taskId).populate("projectId", "ownerId members");
-  
-  if (!task) {
-    throw new AppError("Task not found", 404);
-  }
-
-  // Verify user has access to the project
-  const project = task.projectId as any;
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some((member: any) => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this task", 403);
-  }
-
-  // Update allowed fields
-  const allowedUpdates = ["title", "description", "priority", "dueDate", "tags"];
-  const updates: any = {};
-  
-  allowedUpdates.forEach(field => {
-    if (updateData[field as keyof ITask] !== undefined) {
-      updates[field] = updateData[field as keyof ITask];
-    }
-  });
-
-  const updatedTask = await Task.findByIdAndUpdate(
-    taskId,
-    updates,
-    { new: true, runValidators: true }
-  )
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name");
-
-  return updatedTask!;
-};
-
-// Update task status
-export const updateTaskStatus = async (
-  taskId: string,
-  userId: string,
-  status: TaskStatus
-): Promise<ITask> => {
-  const task = await Task.findById(taskId).populate("projectId", "ownerId members");
-  
-  if (!task) {
-    throw new AppError("Task not found", 404);
-  }
-
-  // Verify user has access to the project
-  const project = task.projectId as any;
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some((member: any) => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this task", 403);
-  }
-
-  task.status = status;
-  await task.save();
-
-  return await Task.findById(taskId)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name") as ITask;
-};
-
-// Assign task
-export const assignTask = async (
-  taskId: string,
-  userId: string,
-  assignToUserId?: string
-): Promise<ITask> => {
-  const task = await Task.findById(taskId).populate("projectId", "ownerId members");
-  
-  if (!task) {
-    throw new AppError("Task not found", 404);
-  }
-
-  // Verify user has access to the project
-  const project = task.projectId as any;
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some((member: any) => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this task", 403);
-  }
-
-  // If assignToUserId is provided, verify they are a member of the project
-  if (assignToUserId) {
-    const isMember = project.ownerId.toString() === assignToUserId || 
-                    project.members.some((member: any) => member.toString() === assignToUserId);
-    
-    if (!isMember) {
-      throw new AppError("Cannot assign task to non-project member", 400);
-    }
-
-    task.assignedTo = assignToUserId as any;
-  } else {
-    // Unassign task
-    task.assignedTo = undefined;
-  }
-
-  await task.save();
-
-  return await Task.findById(taskId)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name") as ITask;
-};
-
-// Get user's assigned tasks
-export const getUserAssignedTasks = async (
-  userId: string,
-  filters: {
-    status?: TaskStatus;
-    priority?: TaskPriority;
-    projectId?: string;
-  } = {},
-  page: number = 1,
-  limit: number = 20
-) => {
-  const query: any = { assignedTo: userId };
-  
-  if (filters.status) query.status = filters.status;
-  if (filters.priority) query.priority = filters.priority;
-  if (filters.projectId) query.projectId = filters.projectId;
-
-  const skip = (page - 1) * limit;
-
-  const tasks = await Task.find(query)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name")
-    .sort({ dueDate: 1, createdAt: -1 }) // Due date first, then created date
-    .skip(skip)
-    .limit(limit);
-
-  const total = await Task.countDocuments(query);
-
-  return {
-    tasks,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalTasks: total,
-      hasMore: skip + limit < total
-    }
-  };
-};
-
-// Delete task
-export const deleteTask = async (taskId: string, userId: string): Promise<{ message: string }> => {
-  const task = await Task.findById(taskId).populate("projectId", "ownerId members");
-  
-  if (!task) {
-    throw new AppError("Task not found", 404);
-  }
-
-  // Only project members can delete tasks
-  const project = task.projectId as any;
-  const hasAccess = project.ownerId.toString() === userId || 
-                   project.members.some((member: any) => member.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this task", 403);
-  }
-
-  await Task.findByIdAndDelete(taskId);
-
-  return { message: "Task deleted successfully" };
-};
-
-// Search tasks
-export const searchTasks = async (
-  userId: string,
-  query: string,
-  projectId?: string,
-  page: number = 1,
-  limit: number = 20
-) => {
-  // Build search query
-  const searchQuery: any = {
-    $text: { $search: query }
-  };
-
-  if (projectId) {
-    // If specific project, verify access first
-    const project = await Project.findById(projectId);
-    if (!project || !project.isActive) {
-      throw new AppError("Project not found", 404);
-    }
-
-    const hasAccess = project.ownerId.toString() === userId || 
-                     project.members.some(member => member.toString() === userId);
-    
+  // Create new task
+  async createTask(
+    title: string,
+    description: string | undefined,
+    projectId: string,
+    createdById: string,
+    priority: TaskPriority = TaskPriority.MEDIUM,
+    dueDate?: Date,
+    tags: string[] = []
+  ): Promise<ITask> {
+    // Verify project exists and user has access
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, createdById);
     if (!hasAccess) {
       throw new AppError("Access denied to this project", 403);
     }
 
-    searchQuery.projectId = projectId;
-  } else {
-    // Search across all user's projects
-    const userProjects = await Project.find({
-      $and: [
-        { isActive: true },
-        { $or: [{ ownerId: userId }, { members: userId }] }
-      ]
-    }).select("_id");
+    const createdByObjectId = new mongoose.Types.ObjectId(createdById);
+    const projectObjectId = new mongoose.Types.ObjectId(projectId);
 
-    const projectIds = userProjects.map(p => p._id);
-    searchQuery.projectId = { $in: projectIds };
+    const task = await this.taskRepository.create({
+      title,
+      description,
+      status: TaskStatus.TODO,
+      priority,
+      projectId: projectObjectId,
+      createdBy: createdByObjectId,
+      dueDate,
+      tags
+    });
+
+    return await this.taskRepository.findById(task._id as string, ['createdBy', 'assignedTo', 'projectId']) as ITask;
   }
 
-  const skip = (page - 1) * limit;
+  // Get tasks by project
+  async getTasksByProject(
+    projectId: string,
+    userId: string,
+    filters: {
+      status?: TaskStatus;
+      assignedTo?: string;
+      priority?: TaskPriority;
+      tags?: string[];
+    } = {},
+    page: number = 1,
+    limit: number = 20
+  ) {
+    // Verify user has access to project
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
+    if (!hasAccess) {
+      throw new AppError("Access denied to this project", 403);
+    }
 
-  const tasks = await Task.find(searchQuery)
-    .populate("createdBy", "name email")
-    .populate("assignedTo", "name email")
-    .populate("projectId", "name")
-    .sort({ score: { $meta: "textScore" } })
-    .skip(skip)
-    .limit(limit);
+    return await this.taskRepository.findTasksWithPagination(
+      {},
+      page,
+      limit,
+      {
+        projectId,
+        assignedTo: filters.assignedTo,
+        status: filters.status,
+        priority: filters.priority
+      }
+    );
+  }
 
-  const total = await Task.countDocuments(searchQuery);
+  // Get task by ID
+  async getTaskById(taskId: string, userId: string): Promise<ITask> {
+    const task = await this.taskRepository.findById(taskId, ['createdBy', 'assignedTo', 'projectId']);
+    if (!task) {
+      throw new AppError("Task not found", 404);
+    }
 
-  return {
-    tasks,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalTasks: total,
-      hasMore: skip + limit < total
-    },
-    query
-  };
-};
+    // Verify user has access to the project this task belongs to
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), userId);
+    if (!hasAccess) {
+      throw new AppError("Access denied to this task", 403);
+    }
+
+    return task;
+  }
+
+  // Update task
+  async updateTask(
+    taskId: string,
+    userId: string,
+    updateData: {
+      title?: string;
+      description?: string;
+      priority?: TaskPriority;
+      dueDate?: Date | null;
+      tags?: string[];
+    }
+  ): Promise<ITask> {
+    const task = await this.getTaskById(taskId, userId);
+
+    const updates: any = {};
+    const allowedUpdates = ["title", "description", "priority", "dueDate", "tags"];
+    
+    allowedUpdates.forEach(field => {
+      if (updateData[field as keyof typeof updateData] !== undefined) {
+        updates[field] = updateData[field as keyof typeof updateData];
+      }
+    });
+
+    return await this.taskRepository.findByIdAndUpdate(taskId, updates, {
+      populate: ['createdBy', 'assignedTo', 'projectId']
+    }) as ITask;
+  }
+
+  // Update task status
+  async updateTaskStatus(taskId: string, userId: string, status: TaskStatus): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.updateStatus(taskId, status) as ITask;
+  }
+
+  // Assign task
+  async assignTask(taskId: string, userId: string, assigneeId: string): Promise<ITask> {
+    const task = await this.getTaskById(taskId, userId);
+    
+    // Verify assignee has access to the project
+    const assigneeHasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), assigneeId);
+    if (!assigneeHasAccess) {
+      throw new AppError("Assignee does not have access to this project", 400);
+    }
+
+    return await this.taskRepository.assignTask(taskId, assigneeId) as ITask;
+  }
+
+  // Unassign task
+  async unassignTask(taskId: string, userId: string): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.unassignTask(taskId) as ITask;
+  }
+
+  // Delete task
+  async deleteTask(taskId: string, userId: string): Promise<{ message: string }> {
+    await this.getTaskById(taskId, userId); // Verify access
+    await this.taskRepository.findByIdAndDelete(taskId);
+    return { message: "Task deleted successfully" };
+  }
+
+  // Get user's assigned tasks
+  async getUserTasks(userId: string, page: number = 1, limit: number = 20) {
+    return await this.taskRepository.findTasksWithPagination(
+      {},
+      page,
+      limit,
+      { assignedTo: userId }
+    );
+  }
+
+  // Get user dashboard
+  async getUserDashboard(userId: string) {
+    return await this.taskRepository.getUserDashboard(userId);
+  }
+
+  // Search tasks
+  async searchTasks(
+    searchTerm: string,
+    userId: string,
+    filters: {
+      projectId?: string;
+      status?: TaskStatus;
+      priority?: TaskPriority;
+    } = {},
+    page: number = 1,
+    limit: number = 20
+  ) {
+    const options = {
+      projectId: filters.projectId,
+      limit,
+      skip: (page - 1) * limit
+    };
+
+    const tasks = await this.taskRepository.searchTasks(searchTerm, options);
+
+    // Filter tasks by user access (this could be optimized)
+    const accessibleTasks = [];
+    for (const task of tasks) {
+      const hasAccess = await this.projectRepository.isUserMemberOrOwner(task.projectId.toString(), userId);
+      if (hasAccess) {
+        accessibleTasks.push(task);
+      }
+    }
+
+    return {
+      tasks: accessibleTasks,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(accessibleTasks.length / limit),
+        totalTasks: accessibleTasks.length,
+        hasMore: accessibleTasks.length === limit
+      },
+      searchTerm
+    };
+  }
+
+  // Get tasks by status
+  async getTasksByStatus(status: TaskStatus, projectId?: string) {
+    return await this.taskRepository.findByStatus(status, projectId);
+  }
+
+  // Get tasks by priority
+  async getTasksByPriority(priority: TaskPriority, projectId?: string) {
+    return await this.taskRepository.findByPriority(priority, projectId);
+  }
+
+  // Get overdue tasks
+  async getOverdueTasks() {
+    return await this.taskRepository.findOverdueTasks();
+  }
+
+  // Get tasks due soon
+  async getTasksDueSoon(days: number = 7) {
+    return await this.taskRepository.findDueSoonTasks(days);
+  }
+
+  // Update task priority
+  async updateTaskPriority(taskId: string, userId: string, priority: TaskPriority): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.updatePriority(taskId, priority) as ITask;
+  }
+
+  // Update task due date
+  async updateTaskDueDate(taskId: string, userId: string, dueDate: Date | null): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.updateDueDate(taskId, dueDate) as ITask;
+  }
+
+  // Add tag to task
+  async addTaskTag(taskId: string, userId: string, tag: string): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.addTag(taskId, tag) as ITask;
+  }
+
+  // Remove tag from task
+  async removeTaskTag(taskId: string, userId: string, tag: string): Promise<ITask> {
+    await this.getTaskById(taskId, userId); // Verify access
+    return await this.taskRepository.removeTag(taskId, tag) as ITask;
+  }
+
+  // Get tasks by tags
+  async getTasksByTags(tags: string[], projectId?: string) {
+    return await this.taskRepository.findByTags(tags, projectId);
+  }
+
+  // Get project task statistics
+  async getProjectTaskStats(projectId: string, userId: string) {
+    // Verify user has access to project
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
+    if (!hasAccess) {
+      throw new AppError("Access denied to this project", 403);
+    }
+
+    return await this.taskRepository.getProjectTaskStats(projectId);
+  }
+
+  // Get task completion stats
+  async getTaskCompletion(projectId: string, userId: string, period: 'week' | 'month' = 'week') {
+    // Verify user has access to project
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
+    if (!hasAccess) {
+      throw new AppError("Access denied to this project", 403);
+    }
+
+    return await this.taskRepository.getTaskCompletion(projectId, period);
+  }
+}
+
+// Export singleton instance for backward compatibility
+export const taskService = new TaskService();
+
+// Export individual functions for backward compatibility (you'll need to implement these)
+export const createTask = taskService.createTask.bind(taskService);
+export const getTasksByProject = taskService.getTasksByProject.bind(taskService);
+export const getTaskById = taskService.getTaskById.bind(taskService);
+export const updateTask = taskService.updateTask.bind(taskService);
+export const updateTaskStatus = taskService.updateTaskStatus.bind(taskService);
+export const assignTask = taskService.assignTask.bind(taskService);
+export const unassignTask = taskService.unassignTask.bind(taskService);
+export const deleteTask = taskService.deleteTask.bind(taskService);

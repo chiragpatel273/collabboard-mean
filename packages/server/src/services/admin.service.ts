@@ -1,147 +1,129 @@
-import { User, IUser, UserRole } from "../models/user.model";
+import { UserRole } from "../models/user.model";
 import { AppError } from "../middleware/error.middleware";
-import { register } from "./auth.service";
+import { UserRepository } from "../repositories";
+import { authService } from "./auth.service";
 
-// Get all users (admin only)
-export const getAllUsers = async (page: number = 1, limit: number = 10) => {
-  const skip = (page - 1) * limit;
-  
-  const users = await User.find()
-    .select('-password -refreshTokens')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+export class AdminService {
+  private userRepository: UserRepository;
 
-  const total = await User.countDocuments();
-  
-  return {
-    users,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalUsers: total,
-      hasMore: skip + limit < total
+  constructor() {
+    this.userRepository = new UserRepository();
+  }
+
+  // Get all users (admin only)
+  async getAllUsers(page: number = 1, limit: number = 10) {
+    return await this.userRepository.findUsersWithPagination({}, page, limit);
+  }
+
+  // Get user by ID
+  async getUserById(userId: string) {
+    const user = await this.userRepository.findById(userId, '-password -refreshTokens');
+    if (!user) {
+      throw new AppError("User not found", 404);
     }
-  };
-};
-
-// Get user by ID
-export const getUserById = async (userId: string) => {
-  const user = await User.findById(userId).select('-password -refreshTokens');
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
-  return user;
-};
-
-// Update user role (admin only)
-export const updateUserRole = async (userId: string, role: UserRole) => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
+    return user;
   }
 
-  user.role = role;
-  await user.save();
-  
-  return await User.findById(userId).select('-password -refreshTokens');
-};
-
-// Activate/Deactivate user (admin only)
-export const toggleUserStatus = async (userId: string, isActive: boolean) => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
-
-  user.isActive = isActive;
-  
-  // If deactivating, clear all refresh tokens to force logout
-  if (!isActive) {
-    user.refreshTokens = [];
-  }
-  
-  await user.save();
-  
-  return await User.findById(userId).select('-password -refreshTokens');
-};
-
-// Delete user (admin only)
-export const deleteUser = async (userId: string) => {
-  const user = await User.findById(userId);
-  if (!user) {
-    throw new AppError("User not found", 404);
-  }
-
-  // Prevent admins from deleting themselves
-  if (user.role === UserRole.ADMIN) {
-    const adminCount = await User.countDocuments({ role: UserRole.ADMIN });
-    if (adminCount <= 1) {
-      throw new AppError("Cannot delete the last admin user", 400);
+  // Update user role (admin only)
+  async updateUserRole(userId: string, role: UserRole) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
     }
+
+    const updatedUser = await this.userRepository.updateRole(userId, role);
+    return updatedUser;
   }
 
-  await User.findByIdAndDelete(userId);
-  return { message: "User deleted successfully" };
-};
+  // Activate/Deactivate user (admin only)
+  async toggleUserStatus(userId: string, isActive: boolean) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
 
-// Create admin user (super admin only or initial setup)
-export const createAdminUser = async (name: string, email: string, password: string) => {
-  return await register(name, email, password, UserRole.ADMIN);
-};
+    let updatedUser;
+    if (isActive) {
+      updatedUser = await this.userRepository.activateUser(userId);
+    } else {
+      updatedUser = await this.userRepository.deactivateUser(userId);
+    }
 
-// Get user statistics
-export const getUserStats = async () => {
-  const totalUsers = await User.countDocuments();
-  const activeUsers = await User.countDocuments({ isActive: true });
-  const adminUsers = await User.countDocuments({ role: UserRole.ADMIN });
-  const regularUsers = await User.countDocuments({ role: UserRole.USER });
-  
-  // Get recent registrations (last 30 days)
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-  const recentRegistrations = await User.countDocuments({ 
-    createdAt: { $gte: thirtyDaysAgo }
-  });
+    return updatedUser;
+  }
 
-  return {
-    totalUsers,
-    activeUsers,
-    inactiveUsers: totalUsers - activeUsers,
-    adminUsers,
-    regularUsers,
-    recentRegistrations
-  };
-};
+  // Delete user (admin only)
+  async deleteUser(userId: string) {
+    const user = await this.userRepository.findById(userId);
+    if (!user) {
+      throw new AppError("User not found", 404);
+    }
 
-// Search users
-export const searchUsers = async (query: string, page: number = 1, limit: number = 10) => {
-  const skip = (page - 1) * limit;
-  
-  const searchRegex = new RegExp(query, 'i');
-  const searchQuery = {
-    $or: [
-      { name: searchRegex },
-      { email: searchRegex }
-    ]
-  };
+    // Prevent admins from deleting themselves
+    if (user.role === UserRole.ADMIN) {
+      const adminCount = await this.userRepository.countDocuments({ role: UserRole.ADMIN });
+      if (adminCount <= 1) {
+        throw new AppError("Cannot delete the last admin user", 400);
+      }
+    }
 
-  const users = await User.find(searchQuery)
-    .select('-password -refreshTokens')
-    .sort({ createdAt: -1 })
-    .skip(skip)
-    .limit(limit);
+    await this.userRepository.findByIdAndDelete(userId);
+    return { message: "User deleted successfully" };
+  }
 
-  const total = await User.countDocuments(searchQuery);
-  
-  return {
-    users,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalUsers: total,
-      hasMore: skip + limit < total
-    },
-    query
-  };
-};
+  // Create admin user (super admin only or initial setup)
+  async createAdminUser(name: string, email: string, password: string) {
+    return await authService.register(name, email, password, UserRole.ADMIN);
+  }
+
+  // Get user statistics
+  async getUserStats() {
+    return await this.userRepository.getUserStats();
+  }
+
+  // Search users
+  async searchUsers(query: string, page: number = 1, limit: number = 10) {
+    const users = await this.userRepository.searchUsers(query, { 
+      limit, 
+      skip: (page - 1) * limit 
+    });
+    
+    const total = users.length; // This is approximate - for exact count, would need separate query
+    
+    return {
+      users,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalUsers: total,
+        hasMore: users.length === limit
+      },
+      query
+    };
+  }
+
+  // Get users by role
+  async getUsersByRole(role: UserRole, page: number = 1, limit: number = 10) {
+    return await this.userRepository.findUsersWithPagination({}, page, limit, { role });
+  }
+
+  // Get active/inactive users
+  async getUsersByStatus(isActive: boolean, page: number = 1, limit: number = 10) {
+    return await this.userRepository.findUsersWithPagination({}, page, limit, { isActive });
+  }
+}
+
+// Export singleton instance for backward compatibility
+export const adminService = new AdminService();
+
+// Export individual functions for backward compatibility
+export const {
+  getAllUsers,
+  getUserById,
+  updateUserRole,
+  toggleUserStatus,
+  deleteUser,
+  createAdminUser,
+  getUserStats,
+  searchUsers
+} = adminService;

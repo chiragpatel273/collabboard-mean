@@ -1,220 +1,219 @@
-import { Project, IProject } from "../models/project.model";
-import { User } from "../models/user.model";
+import { IProject } from "../models/project.model";
 import { AppError } from "../middleware/error.middleware";
+import { ProjectRepository, UserRepository } from "../repositories";
 import mongoose from "mongoose";
 
-// Create new project
-export const createProject = async (name: string, description: string | undefined, ownerId: string): Promise<IProject> => {
-  const project = new Project({
-    name,
-    description,
-    ownerId,
-    members: [ownerId], // Owner is automatically a member
-    isActive: true
-  });
+export class ProjectService {
+  private projectRepository: ProjectRepository;
+  private userRepository: UserRepository;
 
-  await project.save();
-  return await Project.findById(project._id)
-    .populate("ownerId", "name email")
-    .populate("members", "name email") as IProject;
-};
+  constructor() {
+    this.projectRepository = new ProjectRepository();
+    this.userRepository = new UserRepository();
+  }
 
-// Get user's projects (owned or member)
-export const getUserProjects = async (userId: string, page: number = 1, limit: number = 10) => {
-  const skip = (page - 1) * limit;
-  
-  const projects = await Project.find({
-    $and: [
-      { isActive: true },
-      { $or: [{ ownerId: userId }, { members: userId }] }
-    ]
-  })
-    .populate("ownerId", "name email")
-    .populate("members", "name email")
-    .sort({ updatedAt: -1 })
-    .skip(skip)
-    .limit(limit);
+  // Create new project
+  async createProject(name: string, description: string | undefined, ownerId: string): Promise<IProject> {
+    const ownerObjectId = new mongoose.Types.ObjectId(ownerId);
+    
+    const project = await this.projectRepository.create({
+      name,
+      description,
+      ownerId: ownerObjectId,
+      members: [ownerObjectId], // Owner is automatically a member
+      isActive: true,
+      isDeleted: false
+    });
 
-  const total = await Project.countDocuments({
-    $and: [
-      { isActive: true },
-      { $or: [{ ownerId: userId }, { members: userId }] }
-    ]
-  });
+    // Return with populated fields
+    return await this.projectRepository.findById(project._id as string, ['ownerId', 'members']) as IProject;
+  }
 
-  return {
-    projects,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalProjects: total,
-      hasMore: skip + limit < total
+  // Get user's projects (owned or member)
+  async getUserProjects(userId: string, page: number = 1, limit: number = 10) {
+    return await this.projectRepository.findProjectsWithPagination({}, page, limit, { userId });
+  }
+
+  // Get project by ID with permission check
+  async getProjectById(projectId: string, userId: string): Promise<IProject> {
+    const project = await this.projectRepository.findById(projectId, ['ownerId', 'members']);
+
+    if (!project || project.isDeleted) {
+      throw new AppError("Project not found", 404);
     }
-  };
-};
 
-// Get project by ID with permission check
-export const getProjectById = async (projectId: string, userId: string): Promise<IProject> => {
-  const project = await Project.findById(projectId)
-    .populate("ownerId", "name email")
-    .populate("members", "name email");
-
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
-  }
-
-  // Check if user has access to this project
-  const hasAccess = project.ownerId._id.toString() === userId || 
-                   project.members.some(member => member._id.toString() === userId);
-  
-  if (!hasAccess) {
-    throw new AppError("Access denied to this project", 403);
-  }
-
-  return project;
-};
-
-// Update project
-export const updateProject = async (projectId: string, userId: string, updateData: Partial<IProject>): Promise<IProject> => {
-  const project = await Project.findById(projectId);
-  
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
-  }
-
-  // Only owner can update project
-  if (project.ownerId.toString() !== userId) {
-    throw new AppError("Only project owner can update project", 403);
-  }
-
-  // Update allowed fields
-  const allowedUpdates = ["name", "description"];
-  const updates: any = {};
-  
-  allowedUpdates.forEach(field => {
-    if (updateData[field as keyof IProject] !== undefined) {
-      updates[field] = updateData[field as keyof IProject];
+    // Check if user has access to this project
+    const hasAccess = await this.projectRepository.isUserMemberOrOwner(projectId, userId);
+    if (!hasAccess) {
+      throw new AppError("Access denied to this project", 403);
     }
-  });
 
-  const updatedProject = await Project.findByIdAndUpdate(
-    projectId,
-    updates,
-    { new: true, runValidators: true }
-  )
-    .populate("ownerId", "name email")
-    .populate("members", "name email");
-
-  return updatedProject!;
-};
-
-// Add member to project
-export const addMemberToProject = async (projectId: string, ownerId: string, memberEmail: string): Promise<IProject> => {
-  const project = await Project.findById(projectId);
-  
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
+    return project;
   }
 
-  // Only owner can add members
-  if (project.ownerId.toString() !== ownerId) {
-    throw new AppError("Only project owner can add members", 403);
+  // Update project
+  async updateProject(projectId: string, userId: string, updateData: Partial<IProject>): Promise<IProject> {
+    const project = await this.projectRepository.findById(projectId);
+    
+    if (!project || project.isDeleted) {
+      throw new AppError("Project not found", 404);
+    }
+
+    // Only owner can update project
+    const projectOwner = await this.projectRepository.getProjectOwner(projectId);
+    if (projectOwner !== userId) {
+      throw new AppError("Only project owner can update project", 403);
+    }
+
+    // Update allowed fields
+    const allowedUpdates = ["name", "description"];
+    const updates: any = {};
+    
+    allowedUpdates.forEach(field => {
+      if (updateData[field as keyof IProject] !== undefined) {
+        updates[field] = updateData[field as keyof IProject];
+      }
+    });
+
+    const updatedProject = await this.projectRepository.findByIdAndUpdate(
+      projectId,
+      updates,
+      { populate: ['ownerId', 'members'] }
+    );
+
+    return updatedProject!;
   }
 
-  // Find user by email
-  const user = await User.findOne({ email: memberEmail, isActive: true });
-  if (!user) {
-    throw new AppError("User not found or inactive", 404);
+  // Add member to project
+  async addMemberToProject(projectId: string, ownerId: string, memberEmail: string): Promise<IProject> {
+    const project = await this.projectRepository.findById(projectId);
+    
+    if (!project || project.isDeleted) {
+      throw new AppError("Project not found", 404);
+    }
+
+    // Only owner can add members
+    if (project.ownerId.toString() !== ownerId) {
+      throw new AppError("Only project owner can add members", 403);
+    }
+
+    // Find user by email
+    const user = await this.userRepository.findByEmail(memberEmail);
+    if (!user || !user.isActive) {
+      throw new AppError("User not found or inactive", 404);
+    }
+
+    // Check if already a member
+    const isAlreadyMember = await this.projectRepository.isUserMemberOrOwner(projectId, user._id as string);
+    if (isAlreadyMember) {
+      throw new AppError("User is already a member of this project", 400);
+    }
+
+    return await this.projectRepository.addMember(projectId, user._id as string) as IProject;
   }
 
-  // Check if already a member
-  if (project.members.includes(user._id as mongoose.Types.ObjectId)) {
-    throw new AppError("User is already a member of this project", 400);
+  // Remove member from project
+  async removeMemberFromProject(projectId: string, ownerId: string, memberId: string): Promise<IProject> {
+    const project = await this.projectRepository.findById(projectId);
+    
+    if (!project || project.isDeleted) {
+      throw new AppError("Project not found", 404);
+    }
+
+    // Only owner can remove members
+    if (project.ownerId.toString() !== ownerId) {
+      throw new AppError("Only project owner can remove members", 403);
+    }
+
+    // Cannot remove owner
+    if (project.ownerId.toString() === memberId) {
+      throw new AppError("Cannot remove project owner", 400);
+    }
+
+    return await this.projectRepository.removeMember(projectId, memberId) as IProject;
   }
 
-  project.members.push(user._id as mongoose.Types.ObjectId);
-  await project.save();
+  // Soft delete project
+  async deleteProject(projectId: string, userId: string): Promise<{ message: string }> {
+    const project = await this.projectRepository.findById(projectId);
+    
+    if (!project || project.isDeleted) {
+      throw new AppError("Project not found", 404);
+    }
 
-  return await Project.findById(projectId)
-    .populate("ownerId", "name email")
-    .populate("members", "name email") as IProject;
-};
+    // Only owner can delete project
+    if (project.ownerId.toString() !== userId) {
+      throw new AppError("Only project owner can delete project", 403);
+    }
 
-// Remove member from project
-export const removeMemberFromProject = async (projectId: string, ownerId: string, memberId: string): Promise<IProject> => {
-  const project = await Project.findById(projectId);
-  
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
+    await this.projectRepository.softDelete(projectId);
+    return { message: "Project deleted successfully" };
   }
 
-  // Only owner can remove members
-  if (project.ownerId.toString() !== ownerId) {
-    throw new AppError("Only project owner can remove members", 403);
+  // Search projects
+  async searchProjects(userId: string, query: string, page: number = 1, limit: number = 10) {
+    const projects = await this.projectRepository.searchProjects(query, userId, {
+      limit,
+      skip: (page - 1) * limit
+    });
+
+    const total = projects.length; // Approximate count
+    
+    return {
+      projects,
+      pagination: {
+        currentPage: page,
+        totalPages: Math.ceil(total / limit),
+        totalProjects: total,
+        hasMore: projects.length === limit
+      },
+      query
+    };
   }
 
-  // Cannot remove owner
-  if (project.ownerId.toString() === memberId) {
-    throw new AppError("Cannot remove project owner", 400);
+  // Get projects by owner
+  async getProjectsByOwner(ownerId: string): Promise<IProject[]> {
+    return await this.projectRepository.findByOwner(ownerId);
   }
 
-  project.members = project.members.filter(member => member.toString() !== memberId);
-  await project.save();
-
-  return await Project.findById(projectId)
-    .populate("ownerId", "name email")
-    .populate("members", "name email") as IProject;
-};
-
-// Soft delete project
-export const deleteProject = async (projectId: string, userId: string): Promise<{ message: string }> => {
-  const project = await Project.findById(projectId);
-  
-  if (!project || !project.isActive) {
-    throw new AppError("Project not found", 404);
+  // Get project statistics
+  async getProjectStats() {
+    return await this.projectRepository.getProjectStats();
   }
 
-  // Only owner can delete project
-  if (project.ownerId.toString() !== userId) {
-    throw new AppError("Only project owner can delete project", 403);
+  // Update project activity timestamp
+  async updateProjectActivity(projectId: string): Promise<void> {
+    await this.projectRepository.updateLastActivity(projectId);
   }
 
-  // Soft delete
-  project.isActive = false;
-  await project.save();
+  // Restore deleted project
+  async restoreProject(projectId: string, userId: string): Promise<IProject> {
+    const project = await this.projectRepository.findById(projectId);
+    
+    if (!project) {
+      throw new AppError("Project not found", 404);
+    }
 
-  return { message: "Project deleted successfully" };
-};
+    // Only owner can restore project
+    if (project.ownerId.toString() !== userId) {
+      throw new AppError("Only project owner can restore project", 403);
+    }
 
-// Search projects
-export const searchProjects = async (userId: string, query: string, page: number = 1, limit: number = 10) => {
-  const skip = (page - 1) * limit;
-  
-  const searchQuery = {
-    $and: [
-      { isActive: true },
-      { $or: [{ ownerId: userId }, { members: userId }] },
-      { $text: { $search: query } }
-    ]
-  };
+    return await this.projectRepository.restore(projectId) as IProject;
+  }
+}
 
-  const projects = await Project.find(searchQuery)
-    .populate("ownerId", "name email")
-    .populate("members", "name email")
-    .sort({ score: { $meta: "textScore" } })
-    .skip(skip)
-    .limit(limit);
+// Export singleton instance for backward compatibility
+export const projectService = new ProjectService();
 
-  const total = await Project.countDocuments(searchQuery);
-
-  return {
-    projects,
-    pagination: {
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalProjects: total,
-      hasMore: skip + limit < total
-    },
-    query
-  };
-};
+// Export individual functions for backward compatibility
+export const {
+  createProject,
+  getUserProjects,
+  getProjectById,
+  updateProject,
+  addMemberToProject,
+  removeMemberFromProject,
+  deleteProject,
+  searchProjects
+} = projectService;

@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import { asyncHandler } from "../middleware/error.middleware";
 import { UserRole } from "../models/user.model";
 import { configService } from "../config/config";
-import * as adminService from "../services/admin.service";
+import { adminService } from "../services/admin.service";
 
 // Get all users
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {

@@ -6,6 +6,8 @@ export interface IProject extends Document {
   ownerId: mongoose.Types.ObjectId;
   members: mongoose.Types.ObjectId[];
   isActive: boolean;
+  isDeleted: boolean;
+  deletedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -15,7 +17,9 @@ const projectSchema = new Schema<IProject>({
   description: { type: String, trim: true, maxlength: 500 },
   ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
   members: [{ type: Schema.Types.ObjectId, ref: "User" }],
-  isActive: { type: Boolean, default: true }
+  isActive: { type: Boolean, default: true },
+  isDeleted: { type: Boolean, default: false },
+  deletedAt: { type: Date }
 }, {
   timestamps: true
 });
