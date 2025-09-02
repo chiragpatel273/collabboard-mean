@@ -1,6 +1,6 @@
-import { BaseRepository } from './base.repository';
-import { IUser, User } from '../models/user.model';
 import { FilterQuery } from 'mongoose';
+import { IUser, User } from '../models/user.model';
+import { BaseRepository } from './base.repository';
 
 export class UserRepository extends BaseRepository<IUser> {
   constructor() {
@@ -64,14 +64,27 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   async deactivateUser(userId: string): Promise<IUser | null> {
-    return await this.findByIdAndUpdate(userId, {
-      isActive: false,
-      refreshTokens: [],
-    });
+    return await this.findByIdAndUpdate(
+      userId,
+      { isActive: false, refreshTokens: [] },
+      {
+        new: true,
+        runValidators: true,
+        select: '-password -refreshTokens',
+      }
+    );
   }
 
   async activateUser(userId: string): Promise<IUser | null> {
-    return await this.findByIdAndUpdate(userId, { isActive: true });
+    return await this.findByIdAndUpdate(
+      userId,
+      { isActive: true },
+      {
+        new: true,
+        runValidators: true,
+        select: '-password -refreshTokens',
+      }
+    );
   }
 
   async updateRefreshTokens(userId: string, refreshTokens: string[]): Promise<IUser | null> {
@@ -93,7 +106,15 @@ export class UserRepository extends BaseRepository<IUser> {
   }
 
   async updateRole(userId: string, role: 'user' | 'admin'): Promise<IUser | null> {
-    return await this.findByIdAndUpdate(userId, { role });
+    return await this.findByIdAndUpdate(
+      userId,
+      { role },
+      {
+        new: true,
+        runValidators: true,
+        select: '-password -refreshTokens',
+      }
+    );
   }
 
   async getUserStats(): Promise<{

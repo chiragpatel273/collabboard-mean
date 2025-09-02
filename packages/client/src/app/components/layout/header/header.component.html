@@ -9,6 +9,9 @@
     <nav class="nav-menu">
       <a routerLink="/dashboard" routerLinkActive="active" class="nav-link"> Dashboard </a>
       <a routerLink="/projects" routerLinkActive="active" class="nav-link"> Projects </a>
+      <a routerLink="/admin" routerLinkActive="active" class="nav-link admin-link" *ngIf="isAdmin">
+        <i class="fas fa-shield-alt"></i> Admin
+      </a>
     </nav>
 
     <!-- User Menu -->

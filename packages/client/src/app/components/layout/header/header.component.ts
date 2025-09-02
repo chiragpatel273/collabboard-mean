@@ -21,6 +21,10 @@ export class HeaderComponent implements OnInit, OnDestroy {
     private router: Router
   ) {}
 
+  get isAdmin(): boolean {
+    return this.authService.isAdmin;
+  }
+
   ngOnInit(): void {
     // Subscribe to authentication state changes
     const userSub = this.authService.currentUser$.subscribe((user) => {

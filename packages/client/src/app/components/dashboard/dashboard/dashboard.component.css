@@ -779,3 +779,137 @@
     max-width: 100%;
   }
 }
+
+/* Admin Section Styles */
+.admin-section {
+  margin-bottom: 2rem;
+}
+
+.admin-card {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 12px;
+  padding: 1.5rem;
+  color: white;
+  box-shadow: 0 8px 25px rgba(124, 58, 237, 0.3);
+}
+
+.admin-header {
+  margin-bottom: 1rem;
+}
+
+.admin-header h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.admin-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.admin-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+@media (max-width: 768px) {
+  .admin-actions {
+    flex-direction: column;
+  }
+
+  .admin-btn {
+    justify-content: center;
+  }
+}
+
+/* Admin Section Styles */
+.admin-section {
+  margin-bottom: 32px;
+}
+
+.admin-card {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-radius: 12px;
+  padding: 24px;
+  color: white;
+  box-shadow: 0 10px 30px rgba(124, 58, 237, 0.3);
+}
+
+.admin-header {
+  margin-bottom: 20px;
+}
+
+.admin-header h3 {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-actions {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-btn {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 12px 20px;
+  border-radius: 8px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  min-width: 150px;
+  justify-content: center;
+}
+
+.admin-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.admin-btn i {
+  font-size: 16px;
+}
+
+@media (max-width: 768px) {
+  .admin-actions {
+    flex-direction: column;
+  }
+
+  .admin-btn {
+    min-width: 100%;
+    justify-content: center;
+  }
+}

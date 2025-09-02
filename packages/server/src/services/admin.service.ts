@@ -1,5 +1,5 @@
-import { UserRole } from '../models/user.model';
 import { AppError } from '../middleware/error.middleware';
+import { UserRole } from '../models/user.model';
 import { UserRepository } from '../repositories';
 import { authService } from './auth.service';
 
@@ -12,7 +12,11 @@ export class AdminService {
 
   // Get all users (admin only)
   async getAllUsers(page: number = 1, limit: number = 10) {
-    return await this.userRepository.findUsersWithPagination({}, page, limit);
+    const result = await this.userRepository.findUsersWithPagination({}, page, limit);
+    return {
+      users: result.documents,
+      pagination: result.pagination,
+    };
   }
 
   // Get user by ID
@@ -95,10 +99,9 @@ export class AdminService {
       pagination: {
         currentPage: page,
         totalPages: Math.ceil(total / limit),
-        totalUsers: total,
+        totalDocuments: total,
         hasMore: users.length === limit,
       },
-      query,
     };
   }
 

@@ -59,6 +59,28 @@
   background: #eff6ff;
 }
 
+.nav-link.admin-link {
+  color: #7c3aed;
+  border: 1px solid #e4d4f4;
+  background: #faf5ff;
+}
+
+.nav-link.admin-link:hover {
+  color: #6d28d9;
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.nav-link.admin-link.active {
+  color: #7c3aed;
+  background: #f3e8ff;
+  border-color: #d8b4fe;
+}
+
+.nav-link.admin-link i {
+  margin-right: 4px;
+}
+
 .user-menu {
   display: flex;
   align-items: center;

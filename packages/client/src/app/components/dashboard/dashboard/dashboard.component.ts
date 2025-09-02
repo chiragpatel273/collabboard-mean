@@ -40,6 +40,10 @@ export class DashboardComponent implements OnInit {
     this.loadDashboardData();
   }
 
+  get isAdmin(): boolean {
+    return this.authService.isAdmin;
+  }
+
   private loadDashboardData(): void {
     this.isLoading = true;
 

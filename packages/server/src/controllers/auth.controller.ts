@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
+import { configService } from '../config/config';
+import { asyncHandler } from '../middleware/error.middleware';
 import {
-  register as registerUser,
+  cleanupAllExpiredTokens,
   login as loginUser,
-  refreshToken,
   logout,
   logoutAll,
-  cleanupAllExpiredTokens,
+  refreshToken,
+  register as registerUser,
 } from '../services/auth.service';
-import { asyncHandler } from '../middleware/error.middleware';
-import { configService } from '../config/config';
 
 export const register = asyncHandler(async (req: Request, res: Response) => {
   const { name, email, password } = req.body;
@@ -33,6 +33,7 @@ export const register = asyncHandler(async (req: Request, res: Response) => {
       id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
     },
   });
 });
@@ -56,6 +57,7 @@ export const login = asyncHandler(async (req: Request, res: Response) => {
       id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
     },
   });
 });
@@ -76,6 +78,7 @@ export const refresh = asyncHandler(async (req: Request, res: Response) => {
       id: user._id,
       name: user.name,
       email: user.email,
+      role: user.role,
     },
   });
 });

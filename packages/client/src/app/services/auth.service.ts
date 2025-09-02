@@ -2,7 +2,7 @@ import { HttpClient } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { AuthResponse, LoginRequest, RegisterRequest, User } from '../models/user.model';
+import { AuthResponse, LoginRequest, RegisterRequest, User, UserRole } from '../models/user.model';
 
 @Injectable({
   providedIn: 'root',
@@ -103,7 +103,7 @@ export class AuthService {
   }
 
   get isAdmin(): boolean {
-    return this.currentUser?.role === 'admin';
+    return this.currentUser?.role === UserRole.ADMIN;
   }
 
   // Decode JWT token to get expiration time
