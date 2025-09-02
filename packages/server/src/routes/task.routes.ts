@@ -1,24 +1,25 @@
 import { Router } from 'express';
+import {
+  assignTask,
+  createTask,
+  deleteTask,
+  getTaskById,
+  getTasksByProject,
+  getUserAssignedTasks,
+  getUserDashboard,
+  searchTasks,
+  updateTask,
+  updateTaskStatus,
+} from '../controllers/task.controller';
 import { authMiddleware } from '../middleware/auth.middleware';
 import { requireUser } from '../middleware/rbac.middleware';
 import { validate } from '../middleware/validation.middleware';
 import {
+  assignTaskSchema,
   createTaskSchema,
   updateTaskSchema,
   updateTaskStatusSchema,
-  assignTaskSchema,
 } from '../schemas/project.schemas';
-import {
-  createTask,
-  getTasksByProject,
-  getTaskById,
-  updateTask,
-  updateTaskStatus,
-  assignTask,
-  getUserAssignedTasks,
-  deleteTask,
-  searchTasks,
-} from '../controllers/task.controller';
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use(authMiddleware);
 router.use(requireUser);
 
 // Task management routes
+router.get('/dashboard', getUserDashboard);
 router.get('/my', getUserAssignedTasks); // Must come before /:taskId
 router.get('/search', searchTasks);
 

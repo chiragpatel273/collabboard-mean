@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { asyncHandler } from '../middleware/error.middleware';
-import { TaskStatus, TaskPriority } from '../models/task.model';
+import { TaskPriority, TaskStatus } from '../models/task.model';
 import { taskService } from '../services/task.service';
 
 // Create task
@@ -156,5 +156,17 @@ export const searchTasks = asyncHandler(async (req: Request, res: Response) => {
   res.json({
     message: 'Search completed successfully',
     ...result,
+  });
+});
+
+// Get user dashboard data
+export const getUserDashboard = asyncHandler(async (req: Request, res: Response) => {
+  const userId = (req as any).user.id;
+
+  const dashboard = await taskService.getUserDashboard(userId);
+
+  res.json({
+    message: 'Dashboard data retrieved successfully',
+    dashboard,
   });
 });
