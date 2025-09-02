@@ -1,0 +1,73 @@
+<div class="task-board-container">
+  <div class="error-message" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading tasks...</p>
+  </div>
+
+  <div class="task-board" *ngIf="!isLoading">
+    <!-- To Do Column -->
+    <div class="task-column todo" (drop)="onDropTask($event, TaskStatus.TODO)" (dragover)="onDragOver($event)">
+      <div class="column-header">
+        <h3>To Do</h3>
+        <span class="task-count">{{ todoTasks.length }}</span>
+      </div>
+      <div class="task-list">
+        <app-task-card
+          *ngFor="let task of todoTasks"
+          [task]="task"
+          (statusChanged)="onTaskStatusChanged($event.taskId, $event.status)"
+          (taskDeleted)="onTaskDeleted($event)"
+        ></app-task-card>
+        <div class="empty-column" *ngIf="todoTasks.length === 0">
+          <p>No tasks in To Do</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- In Progress Column -->
+    <div
+      class="task-column in-progress"
+      (drop)="onDropTask($event, TaskStatus.IN_PROGRESS)"
+      (dragover)="onDragOver($event)"
+    >
+      <div class="column-header">
+        <h3>In Progress</h3>
+        <span class="task-count">{{ inProgressTasks.length }}</span>
+      </div>
+      <div class="task-list">
+        <app-task-card
+          *ngFor="let task of inProgressTasks"
+          [task]="task"
+          (statusChanged)="onTaskStatusChanged($event.taskId, $event.status)"
+          (taskDeleted)="onTaskDeleted($event)"
+        ></app-task-card>
+        <div class="empty-column" *ngIf="inProgressTasks.length === 0">
+          <p>No tasks in progress</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Done Column -->
+    <div class="task-column done" (drop)="onDropTask($event, TaskStatus.DONE)" (dragover)="onDragOver($event)">
+      <div class="column-header">
+        <h3>Done</h3>
+        <span class="task-count">{{ doneTasks.length }}</span>
+      </div>
+      <div class="task-list">
+        <app-task-card
+          *ngFor="let task of doneTasks"
+          [task]="task"
+          (statusChanged)="onTaskStatusChanged($event.taskId, $event.status)"
+          (taskDeleted)="onTaskDeleted($event)"
+        ></app-task-card>
+        <div class="empty-column" *ngIf="doneTasks.length === 0">
+          <p>No completed tasks</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

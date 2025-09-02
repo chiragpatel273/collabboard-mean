@@ -1,0 +1,57 @@
+<div class="project-list-container">
+  <div class="project-header">
+    <h1>My Projects</h1>
+    <button class="create-btn" (click)="onCreateProject()">
+      <i class="icon-plus"></i>
+      Create New Project
+    </button>
+  </div>
+
+  <div class="error-message" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <div class="loading-spinner" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading projects...</p>
+  </div>
+
+  <div class="projects-grid" *ngIf="!isLoading && projects.length > 0">
+    <div class="project-card" *ngFor="let project of projects" (click)="onProjectClick(project._id)">
+      <div class="project-card-header">
+        <h3>{{ project.name }}</h3>
+        <div class="project-status" [class.active]="project.isActive">
+          {{ project.isActive ? 'Active' : 'Inactive' }}
+        </div>
+      </div>
+
+      <p class="project-description">
+        {{ project.description || 'No description provided' }}
+      </p>
+
+      <div class="project-meta">
+        <div class="project-members">
+          <i class="icon-users"></i>
+          <span>{{ project.members.length + 1 }} members</span>
+        </div>
+        <div class="project-date">Created {{ formatDate(project.createdAt) }}</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="empty-state" *ngIf="!isLoading && projects.length === 0">
+    <div class="empty-icon">📋</div>
+    <h3>No projects yet</h3>
+    <p>Get started by creating your first project</p>
+    <button class="create-btn" (click)="onCreateProject()">Create Your First Project</button>
+  </div>
+
+  <!-- Pagination -->
+  <div class="pagination" *ngIf="!isLoading && projects.length > 0 && totalPages > 1">
+    <button class="page-btn" [disabled]="!hasPreviousPage" (click)="onPreviousPage()">Previous</button>
+
+    <span class="page-info"> Page {{ currentPage }} of {{ totalPages }} </span>
+
+    <button class="page-btn" [disabled]="!hasNextPage" (click)="onNextPage()">Next</button>
+  </div>
+</div>

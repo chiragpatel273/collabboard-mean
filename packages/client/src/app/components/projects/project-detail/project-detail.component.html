@@ -1,0 +1,54 @@
+<div class="project-detail-container">
+  <!-- Header -->
+  <div class="project-header">
+    <button class="back-btn" (click)="goBack()">← Back to Projects</button>
+  </div>
+
+  <!-- Loading State -->
+  <div class="loading-spinner" *ngIf="isLoading">
+    <div class="spinner"></div>
+    <p>Loading project...</p>
+  </div>
+
+  <!-- Error State -->
+  <div class="error-message" *ngIf="errorMessage">
+    {{ errorMessage }}
+  </div>
+
+  <!-- Project Content -->
+  <div class="project-content" *ngIf="project && !isLoading">
+    <!-- Project Info -->
+    <div class="project-info">
+      <h1 class="project-title">{{ project.name }}</h1>
+      <p class="project-description" *ngIf="project.description">
+        {{ project.description }}
+      </p>
+      <div class="project-meta">
+        <span class="project-status" [class]="project.isActive ? 'status-active' : 'status-inactive'">
+          {{ project.isActive ? 'Active' : 'Inactive' }}
+        </span>
+        <span class="project-dates"> Created: {{ formatDate(project.createdAt) }} </span>
+        <span class="project-members" *ngIf="project.members && project.members.length > 0">
+          {{ project.members.length }} member(s)
+        </span>
+      </div>
+    </div>
+
+    <!-- Task Board -->
+    <div class="task-board-section">
+      <div class="task-section-header">
+        <h2>Tasks</h2>
+        <button class="btn btn-primary" (click)="openCreateTaskModal()">+ New Task</button>
+      </div>
+      <app-task-board #taskBoard [projectId]="project._id"></app-task-board>
+    </div>
+  </div>
+
+  <!-- Create Task Modal -->
+  <app-create-task
+    *ngIf="showCreateTask && project"
+    [projectId]="project._id"
+    (taskCreated)="onTaskCreated($event)"
+    (cancelled)="closeCreateTaskModal()"
+  ></app-create-task>
+</div>

@@ -1,0 +1,22 @@
+<header class="app-header" *ngIf="isLoggedIn">
+  <div class="header-content">
+    <!-- Logo/Brand -->
+    <div class="brand">
+      <a routerLink="/projects" class="brand-link"> CollabBoard </a>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="nav-menu">
+      <a routerLink="/dashboard" routerLinkActive="active" class="nav-link"> Dashboard </a>
+      <a routerLink="/projects" routerLinkActive="active" class="nav-link"> Projects </a>
+    </nav>
+
+    <!-- User Menu -->
+    <div class="user-menu">
+      <div class="user-info">
+        <span class="user-name">{{ currentUser?.name || currentUser?.email }}</span>
+        <button class="logout-btn" (click)="logout()" title="Logout">Logout</button>
+      </div>
+    </div>
+  </div>
+</header>

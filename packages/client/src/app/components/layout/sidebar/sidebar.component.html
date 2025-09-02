@@ -1,0 +1,47 @@
+<div class="sidebar" [class.collapsed]="isCollapsed">
+  <div class="sidebar-header">
+    <div class="logo" *ngIf="!isCollapsed">
+      <h2>CollabBoard</h2>
+    </div>
+    <div class="logo-collapsed" *ngIf="isCollapsed">
+      <span>CB</span>
+    </div>
+    <button class="toggle-btn" (click)="toggleSidebar()">
+      <span [innerHTML]="isCollapsed ? '→' : '←'"></span>
+    </button>
+  </div>
+
+  <nav class="navigation">
+    <ul class="nav-list">
+      <li *ngFor="let item of navigationItems" class="nav-item" [class.active]="item.active">
+        <a [routerLink]="item.route" class="nav-link" (click)="setActive(item)" [title]="item.label">
+          <span class="nav-icon">{{ item.icon }}</span>
+          <span class="nav-label" *ngIf="!isCollapsed">{{ item.label }}</span>
+        </a>
+      </li>
+    </ul>
+  </nav>
+
+  <div class="sidebar-footer">
+    <div class="user-info" *ngIf="currentUser">
+      <div class="user-avatar">
+        {{ currentUser.name.charAt(0).toUpperCase() }}
+      </div>
+      <div class="user-details" *ngIf="!isCollapsed">
+        <div class="user-name">{{ currentUser.name }}</div>
+        <div class="user-email">{{ currentUser.email }}</div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="settings-btn" [title]="'Settings'">
+        <span class="settings-icon">⚙️</span>
+        <span *ngIf="!isCollapsed">Settings</span>
+      </button>
+      <button class="logout-btn" (click)="logout()" [title]="'Logout'">
+        <span class="logout-icon">🚪</span>
+        <span *ngIf="!isCollapsed">Logout</span>
+      </button>
+    </div>
+  </div>
+</div>
