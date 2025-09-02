@@ -6,7 +6,8 @@ dotenv.config();
 interface Config {
   port: number;
   mongoUri: string;
-  jwtSecret: string;
+  accessTokenSecret: string;
+  refreshTokenSecret: string;
   nodeEnv: string;
   logLevel: string;
   corsOrigin: string;
@@ -19,7 +20,8 @@ class ConfigService {
     this.config = {
       port: parseInt(process.env.PORT || "5000", 10),
       mongoUri: this.getRequiredEnv("MONGO_URI"),
-      jwtSecret: this.getRequiredEnv("JWT_SECRET"),
+      accessTokenSecret: this.getRequiredEnv("ACCESS_TOKEN_SECRET"),
+      refreshTokenSecret: this.getRequiredEnv("REFRESH_TOKEN_SECRET"),
       nodeEnv: process.env.NODE_ENV || "development",
       logLevel: process.env.LOG_LEVEL || "info",
       corsOrigin: process.env.CORS_ORIGIN || "*"
@@ -41,8 +43,8 @@ class ConfigService {
       throw new Error("Port must be between 1 and 65535");
     }
 
-    if (this.config.jwtSecret.length < 32) {
-      throw new Error("JWT_SECRET must be at least 32 characters long");
+    if (this.config.accessTokenSecret.length < 32) {
+      throw new Error("ACCESS_TOKEN_SECRET must be at least 32 characters long");
     }
 
     if (!this.config.mongoUri.startsWith("mongodb")) {
